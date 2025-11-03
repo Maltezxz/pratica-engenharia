@@ -1,0 +1,25 @@
+<svg width="192" height="192" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo azul escuro da Prática -->
+  <rect width="512" height="512" rx="110" fill="#1A5276"/>
+
+  <!-- Logo Prática - Triângulos centralizados -->
+  <g transform="translate(256, 200)">
+    <!-- Triângulo Superior (Laranja) -->
+    <path d="M 0,-80 L 70,0 L -70,0 Z" fill="#F39C12" />
+
+    <!-- Triângulo Inferior Esquerdo (Azul Claro) -->
+    <path d="M -70,0 L 0,80 L -140,80 Z" fill="#5DADE2" />
+
+    <!-- Triângulo Inferior Centro (Azul Escuro) -->
+    <path d="M -70,0 L 70,0 L 0,80 Z" fill="#0F4C75" />
+
+    <!-- Triângulo Inferior Direito (Azul Médio) -->
+    <path d="M 70,0 L 140,80 L 0,80 Z" fill="#5499C7" />
+  </g>
+
+  <!-- Letra P estilizada -->
+  <text x="256" y="400" font-family="Arial, sans-serif" font-size="90" font-weight="bold" fill="white" text-anchor="middle">P</text>
+
+  <!-- Decoração sutil -->
+  <circle cx="256" cy="200" r="120" fill="none" stroke="#F39C12" stroke-width="2" opacity="0.2"/>
+</svg>
