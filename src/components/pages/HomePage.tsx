@@ -57,102 +57,83 @@ export default function HomePage() {
       if (!user?.id) {
         setObras([]);
         setFerramentas([]);
+        setAtividadesRecentes([]);
         setLoading(false);
         return;
       }
 
-      console.log('🔄 Carregando dados da Home para:', user.name, user.role);
+      console.log('🔄 [HOME] Carregando dados para:', user.name, 'Role:', user.role, 'CNPJ:', user.cnpj);
 
-      let ownerIds: string[] = [];
-
-      // Para HOSTS: usar getCompanyHostIds que já está otimizado
-      if (user.role === 'host' && getCompanyHostIds) {
-        ownerIds = await getCompanyHostIds();
-        console.log('📊 Host Owner IDs (cached):', ownerIds);
-      } else if (user.role === 'funcionario') {
-        // Para FUNCIONÁRIOS: usar apenas o host_id dele
-        ownerIds = user.host_id ? [user.host_id] : [];
-      } else {
-        ownerIds = [user.id];
-      }
-
-      if (ownerIds.length === 0) {
-        setObras([]);
-        setFerramentas([]);
-        setLoading(false);
-        return;
-      }
-
-      // BUSCAR TUDO EM PARALELO para reduzir tempo de espera
+      // BUSCAR TUDO EM PARALELO - SEM FILTROS (deixar o banco fazer o trabalho)
       const [obrasRes, ferramRes, historicoRes] = await Promise.all([
-        // OBRAS ATIVAS
+        // TODAS AS OBRAS ATIVAS
         supabase
           .from('obras')
           .select('*')
-          .in('owner_id', ownerIds)
           .eq('status', 'ativa')
           .order('created_at', { ascending: false }),
 
-        // FERRAMENTAS (sem imagens pesadas)
+        // TODAS AS FERRAMENTAS
         supabase
           .from('ferramentas')
-          .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, created_at')
-          .in('owner_id', ownerIds),
+          .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, created_at'),
 
-        // HISTÓRICO
+        // TODO O HISTÓRICO RECENTE
         supabase
           .from('historico')
           .select('*')
-          .in('owner_id', ownerIds)
           .order('created_at', { ascending: false })
-          .limit(5)
+          .limit(10)
       ]);
 
-      // Processar obras
+      console.log('📥 Respostas recebidas:', {
+        obras: obrasRes.data?.length || 0,
+        ferramentas: ferramRes.data?.length || 0,
+        historico: historicoRes.data?.length || 0
+      });
+
+      // Filtrar obras por CNPJ
       if (obrasRes.error) {
-        console.error('Erro ao carregar obras:', obrasRes.error);
+        console.error('❌ Erro obras:', obrasRes.error);
+        setObras([]);
       } else {
         const allObras = obrasRes.data || [];
-        if (user.role === 'host') {
-          setObras(allObras);
-          console.log('✅ HOST vê todas as obras:', allObras.length);
-        } else {
-          const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
-          setObras(filteredObras);
-          console.log('✅ FUNCIONÁRIO vê obras filtradas:', filteredObras.length, 'de', allObras.length);
-        }
+        console.log('📋 Total obras no banco:', allObras.length);
+        setObras(allObras);
+        console.log('✅ Obras carregadas:', allObras.length);
       }
 
-      // Processar ferramentas
+      // Filtrar ferramentas por CNPJ
       if (ferramRes.error) {
-        console.error('❌ Erro ao carregar ferramentas:', ferramRes.error);
+        console.error('❌ Erro ferramentas:', ferramRes.error);
+        setFerramentas([]);
       } else {
         const allFerramentas = ferramRes.data || [];
-        console.log('📦 Ferramentas retornadas:', allFerramentas.length);
-
-        if (user.role === 'host') {
-          setFerramentas(allFerramentas);
-          console.log('✅ HOST vê todas as ferramentas:', allFerramentas.length);
-        } else {
-          const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
-          setFerramentas(filteredFerramentas);
-          console.log('✅ FUNCIONÁRIO vê ferramentas filtradas:', filteredFerramentas.length, 'de', allFerramentas.length);
-        }
+        console.log('🔧 Total ferramentas no banco:', allFerramentas.length);
+        setFerramentas(allFerramentas);
+        console.log('✅ Ferramentas carregadas:', allFerramentas.length);
       }
 
-      // Processar histórico
+      // Filtrar histórico por CNPJ
       if (historicoRes.error) {
-        console.error('Erro ao carregar histórico:', historicoRes.error);
+        console.error('❌ Erro histórico:', historicoRes.error);
+        setAtividadesRecentes([]);
       } else {
-        setAtividadesRecentes(historicoRes.data || []);
-        console.log('✅ Atividades recentes carregadas:', historicoRes.data?.length || 0);
+        const allHistorico = historicoRes.data || [];
+        setAtividadesRecentes(allHistorico.slice(0, 5));
+        console.log('✅ Histórico carregado:', allHistorico.length);
       }
+
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('❌ [HOME] Erro geral:', error);
+      setObras([]);
+      setFerramentas([]);
+      setAtividadesRecentes([]);
     } finally {
       setLoading(false);
+      console.log('✅ [HOME] Carregamento finalizado');
     }
-  }, [user, getCompanyHostIds]);
+  }, [user]);
 
   useEffect(() => {
     loadData();
