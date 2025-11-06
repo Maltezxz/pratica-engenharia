@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { useNotification } from '../../contexts/NotificationContext';
+import { getFerramentaPermissions } from '../../utils/permissions';
 import { Obra, Ferramenta } from '../../types';
 
 interface ObraWithFerramentas extends Obra {
@@ -23,6 +24,7 @@ export default function HomePage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedFerramentaId, setSelectedFerramentaId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [allowedFerramentaIds, setAllowedFerramentaIds] = useState<Set<string>>(new Set());
 
   const getActivityIcon = (tipoEvento: string) => {
     switch (tipoEvento) {
@@ -151,6 +153,22 @@ export default function HomePage() {
     loadData();
   }, [loadData, refreshTrigger]);
 
+  useEffect(() => {
+    const loadPermissions = async () => {
+      if (!user?.id) return;
+
+      if (user.role === 'host') {
+        const allIds = new Set(todasFerramentas.map(f => f.id));
+        setAllowedFerramentaIds(allIds);
+      } else {
+        const permissions = await getFerramentaPermissions(user.id);
+        setAllowedFerramentaIds(permissions);
+      }
+    };
+
+    loadPermissions();
+  }, [user, todasFerramentas]);
+
   const totalEquipamentos = ferramentas.length;
   const [totalDesaparecidos, setTotalDesaparecidos] = useState(0);
 
@@ -231,7 +249,11 @@ export default function HomePage() {
   };
 
   const ferramentasDisponiveis = todasFerramentas.filter(
-    f => f.status === 'disponivel' || (!f.current_id && f.status !== 'em_uso' && f.status !== 'desaparecida')
+    f => {
+      const isAvailable = f.status === 'disponivel' || (!f.current_id && f.status !== 'em_uso' && f.status !== 'desaparecida');
+      const hasPermission = user?.role === 'host' || allowedFerramentaIds.has(f.id);
+      return isAvailable && hasPermission;
+    }
   );
 
   const stats = [
@@ -493,10 +515,24 @@ export default function HomePage() {
                   <label className="block text-sm font-medium text-gray-200">
                     Selecione o Equipamento
                   </label>
-                  {ferramentasDisponiveis.length === 0 ? (
+                  {user?.role !== 'host' && allowedFerramentaIds.size === 0 ? (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                      <p className="text-sm text-red-400 font-medium mb-1">
+                        Sem permissões
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        Você não tem permissão para adicionar equipamentos. Entre em contato com o administrador.
+                      </p>
+                    </div>
+                  ) : ferramentasDisponiveis.length === 0 ? (
                     <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-                      <p className="text-sm text-yellow-400">
-                        Nenhum equipamento disponível. Todos estão alocados ou cadastre novos na aba Equipamentos.
+                      <p className="text-sm text-yellow-400 font-medium mb-1">
+                        Nenhum equipamento disponível
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {user?.role === 'host'
+                          ? 'Todos os equipamentos estão alocados ou cadastre novos na aba Equipamentos.'
+                          : 'Todos os equipamentos permitidos para você estão alocados.'}
                       </p>
                     </div>
                   ) : (
