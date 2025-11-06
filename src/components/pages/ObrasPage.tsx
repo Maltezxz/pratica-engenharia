@@ -60,7 +60,7 @@ export default function ObrasPage() {
 
       const { data, error } = await supabase
         .from('obras')
-        .select('*')
+        .select('id, title, description, endereco, start_date, engenheiro, status, owner_id, created_at, updated_at')
         .in('owner_id', ownerIds)
         .order('created_at', { ascending: false });
 

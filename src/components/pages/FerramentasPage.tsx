@@ -89,12 +89,12 @@ export default function FerramentasPage() {
         return;
       }
 
-      // BUSCAR FERRAMENTAS COM TIMEOUT
+      // BUSCAR FERRAMENTAS COM TIMEOUT (SEM IMAGENS PARA PERFORMANCE)
       console.log('🔍 Buscando ferramentas no Supabase com owner_ids:', ownerIds);
 
       const ferramentasPromise = supabase
         .from('ferramentas')
-        .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, descricao, nf, nf_image_url, image_url, data, valor, tempo_garantia_dias, garantia, marca, numero_lacre, numero_placa, adesivo, usuario, obra, created_at, updated_at, tipo')
+        .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, descricao, nf, data, valor, tempo_garantia_dias, garantia, marca, numero_lacre, numero_placa, adesivo, usuario, obra, created_at, updated_at, tipo')
         .in('owner_id', ownerIds)
         .order('created_at', { ascending: false });
 
@@ -564,7 +564,6 @@ export default function FerramentasPage() {
                   ferramentaId={ferramenta.id}
                   alt={ferramenta.name}
                   className="w-full h-48 object-cover"
-                  imageUrl={ferramenta.image_url}
                 />
               </div>
               <div className="flex items-start justify-between mb-4">
@@ -1211,7 +1210,6 @@ export default function FerramentasPage() {
                     ferramentaId={selectedFerramenta.id}
                     alt={selectedFerramenta.name}
                     className="w-full h-64 object-cover"
-                    imageUrl={selectedFerramenta.image_url}
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

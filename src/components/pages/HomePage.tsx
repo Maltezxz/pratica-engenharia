@@ -64,12 +64,12 @@ export default function HomePage() {
 
       console.log('🔄 [HOME] Carregando dados para:', user.name, 'Role:', user.role);
 
-      // BUSCAR APENAS OS CAMPOS NECESSÁRIOS - OTIMIZADO
+      // BUSCAR APENAS OS CAMPOS NECESSÁRIOS - OTIMIZADO (SEM IMAGENS)
       const [obrasRes, ferramRes, historicoRes] = await Promise.all([
-        // OBRAS ATIVAS - apenas campos necessários para o card
+        // OBRAS ATIVAS - apenas campos necessários para o card (sem image_url para performance)
         supabase
           .from('obras')
-          .select('id, title, endereco, engenheiro, image_url, created_at')
+          .select('id, title, endereco, engenheiro, created_at')
           .eq('status', 'ativa')
           .order('created_at', { ascending: false })
           .limit(5),
@@ -292,15 +292,6 @@ export default function HomePage() {
                       key={obra.id}
                       className="relative p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200 group"
                     >
-                      {obra.image_url && (
-                        <div className="mb-3 rounded-lg overflow-hidden">
-                          <img
-                            src={obra.image_url}
-                            alt={obra.title}
-                            className="w-full h-24 object-cover group-hover:scale-105 transition-transform duration-200"
-                          />
-                        </div>
-                      )}
                       <h3 className="text-white font-medium mb-1 group-hover:text-red-400 transition-colors">
                         {obra.title}
                       </h3>

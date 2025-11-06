@@ -8,8 +8,8 @@ interface FerramentaImageProps {
   imageUrl?: string;
 }
 
-export function FerramentaImage({ ferramentaId, alt, className = '', imageUrl: initialImageUrl }: FerramentaImageProps) {
-  const { imageUrl, loading } = useFerramentaImage(ferramentaId, initialImageUrl);
+export function FerramentaImage({ ferramentaId, alt, className = '' }: FerramentaImageProps) {
+  const { imageUrl, loading } = useFerramentaImage(ferramentaId);
 
   if (loading) {
     return (

@@ -4,18 +4,11 @@ import { supabase } from '../lib/supabase';
 // Cache de imagens em memória para quando precisar buscar do banco
 const imageCache = new Map<string, string>();
 
-export function useFerramentaImage(ferramentaId: string, initialImageUrl?: string) {
-  const [imageUrl, setImageUrl] = useState<string | null>(initialImageUrl || null);
-  const [loading, setLoading] = useState(!initialImageUrl);
+export function useFerramentaImage(ferramentaId: string) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Se já tem a URL inicial, não precisa buscar
-    if (initialImageUrl) {
-      setImageUrl(initialImageUrl);
-      setLoading(false);
-      return;
-    }
-
     let isMounted = true;
 
     async function loadImage() {
@@ -34,17 +27,26 @@ export function useFerramentaImage(ferramentaId: string, initialImageUrl?: strin
           .from('ferramentas')
           .select('image_url')
           .eq('id', ferramentaId)
-          .single();
+          .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao carregar imagem:', error);
+          throw error;
+        }
 
         if (isMounted && data?.image_url) {
           // Salvar no cache
           imageCache.set(ferramentaId, data.image_url);
           setImageUrl(data.image_url);
+        } else if (isMounted) {
+          // Sem imagem disponível
+          setImageUrl(null);
         }
       } catch (error) {
-        console.error('Erro ao carregar imagem:', error);
+        console.error('Erro ao carregar imagem da ferramenta:', error);
+        if (isMounted) {
+          setImageUrl(null);
+        }
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -57,7 +59,7 @@ export function useFerramentaImage(ferramentaId: string, initialImageUrl?: strin
     return () => {
       isMounted = false;
     };
-  }, [ferramentaId, initialImageUrl]);
+  }, [ferramentaId]);
 
   return { imageUrl, loading };
 }
