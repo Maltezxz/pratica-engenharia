@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
+import { useNotification } from '../contexts/NotificationContext';
 import logoImage from '../assets/pratica-logo-horizontal.png';
 
 interface SidebarProps {
@@ -24,13 +25,14 @@ interface SidebarProps {
 
 export default function Sidebar({ currentPage, setCurrentPage, isOpen, setIsOpen }: SidebarProps) {
   const { user, signOut } = useAuth();
-  const { 
-    isHost, 
-    canManageUsers, 
-    canManageObras, 
-    canManageFerramentas, 
-    canViewRelatorios 
+  const {
+    isHost,
+    canManageUsers,
+    canManageObras,
+    canManageFerramentas,
+    canViewRelatorios
   } = usePermissions();
+  const { showConfirm } = useNotification();
 
   const handleMenuClick = (itemId: string) => {
     setCurrentPage(itemId);
@@ -40,9 +42,13 @@ export default function Sidebar({ currentPage, setCurrentPage, isOpen, setIsOpen
   };
 
   const handleSignOut = () => {
-    if (confirm('Tem certeza que deseja sair?')) {
-      signOut();
-    }
+    showConfirm({
+      title: 'Sair do Sistema',
+      message: 'Tem certeza que deseja sair?',
+      confirmText: 'Sair',
+      type: 'warning',
+      onConfirm: () => signOut(),
+    });
   };
 
   const menuItems = [

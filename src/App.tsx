@@ -1,5 +1,6 @@
 import { AuthProvider } from './contexts/AuthContext';
 import { RefreshProvider } from './contexts/RefreshContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { useAuth } from './hooks/useAuth';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -37,7 +38,9 @@ function App() {
     return (
       <AuthProvider>
         <RefreshProvider>
-          <AppContent />
+          <NotificationProvider>
+            <AppContent />
+          </NotificationProvider>
         </RefreshProvider>
       </AuthProvider>
     );
