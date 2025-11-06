@@ -89,10 +89,20 @@ export default function AssistenciasTecnicasPage() {
         setFerramentas([]);
       } else {
         const allFerramentas = ferramentasRes.data || [];
-        console.log('🔧 Total ferramentas carregadas:', allFerramentas.length);
-        console.log('Ferramentas disponíveis:', allFerramentas.filter(f =>
-          f.status === 'disponivel' || (!f.current_id && f.status !== 'em_uso')
-        ).length);
+        console.log('🔧 Total ferramentas carregadas do banco:', allFerramentas.length);
+
+        const statusCount: Record<string, number> = {};
+        allFerramentas.forEach(f => {
+          statusCount[f.status] = (statusCount[f.status] || 0) + 1;
+        });
+        console.log('📊 Contagem por status:', statusCount);
+
+        const disponiveis = allFerramentas.filter(f => f.status === 'disponivel');
+        console.log('✅ Ferramentas com status "disponivel":', disponiveis.length);
+        if (disponiveis.length > 0) {
+          console.log('Lista de ferramentas disponíveis:', disponiveis.map(f => f.name));
+        }
+
         setFerramentas(allFerramentas);
       }
 
@@ -308,22 +318,23 @@ export default function AssistenciasTecnicasPage() {
 
   const ferramentasDisponiveis = ferramentas.filter(
     f => {
-      // Ferramenta está disponível se:
-      // 1. Status é 'disponivel' OU
-      // 2. Não está em uso, desaparecida e não tem localização definida
-      const isAvailable = f.status === 'disponivel' ||
-                         (f.status !== 'em_uso' && f.status !== 'desaparecida' && !f.current_id);
-
+      // REGRA SIMPLES: Ferramenta está disponível se status === 'disponivel'
+      const isAvailable = f.status === 'disponivel';
       const hasPermission = user?.role === 'host' || allowedFerramentaIds.has(f.id);
 
-      console.log(`🔍 Ferramenta: ${f.name} | Status: ${f.status} | current_id: ${f.current_id || 'null'} | current_type: ${f.current_type || 'null'} | Disponível: ${isAvailable} | Permissão: ${hasPermission}`);
+      if (f.status === 'disponivel') {
+        console.log(`✅ DISPONÍVEL: ${f.name} | Permissão: ${hasPermission}`);
+      } else {
+        console.log(`❌ NÃO DISPONÍVEL: ${f.name} | Status: ${f.status} | current_id: ${f.current_id || 'null'}`);
+      }
 
       return isAvailable && hasPermission;
     }
   );
 
   console.log('📦 Total ferramentas carregadas:', ferramentas.length);
-  console.log('📦 Total ferramentas disponíveis para seleção:', ferramentasDisponiveis.length);
+  console.log('📦 Ferramentas com status "disponivel":', ferramentas.filter(f => f.status === 'disponivel').length);
+  console.log('📦 Ferramentas disponíveis após filtro de permissões:', ferramentasDisponiveis.length);
   console.log('🔐 Permissões do usuário:', allowedFerramentaIds.size, 'ferramentas');
 
   const formatDate = (dateString: string) => {
