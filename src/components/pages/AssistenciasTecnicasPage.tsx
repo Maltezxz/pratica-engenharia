@@ -45,21 +45,23 @@ export default function AssistenciasTecnicasPage() {
         return;
       }
 
-      const ownerIds = user.role === 'host' ? [user.id] : [user.host_id, user.id].filter(Boolean);
-      console.log('🔍 Carregando dados para owner_ids:', ownerIds);
+      // Para hosts: busca apenas suas ferramentas
+      // Para funcionários: busca ferramentas do host dele
+      const ownerId = user.role === 'host' ? user.id : user.host_id;
+      console.log('🔍 Carregando dados para owner_id:', ownerId, '| Usuário:', user.email, '| Role:', user.role);
 
       const [assistenciasRes, ferramentasRes] = await Promise.all([
         supabase
           .from('assistencias_tecnicas')
           .select('*')
-          .in('owner_id', ownerIds)
+          .eq('owner_id', ownerId)
           .eq('status', 'ativa')
           .order('created_at', { ascending: false }),
 
         supabase
           .from('ferramentas')
           .select('*')
-          .in('owner_id', ownerIds)
+          .eq('owner_id', ownerId)
           .neq('status', 'desaparecida'),
       ]);
 
