@@ -231,7 +231,7 @@ export default function HomePage() {
   };
 
   const ferramentasDisponiveis = todasFerramentas.filter(
-    f => !f.current_id || f.status === 'disponivel'
+    f => f.status === 'disponivel' || (!f.current_id && f.status !== 'em_uso' && f.status !== 'desaparecida')
   );
 
   const stats = [
