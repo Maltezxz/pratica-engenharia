@@ -28,6 +28,8 @@ export default function AssistenciasTecnicasPage() {
   const [selectedFerramentaId, setSelectedFerramentaId] = useState('');
   const [saving, setSaving] = useState(false);
   const [allowedFerramentaIds, setAllowedFerramentaIds] = useState<Set<string>>(new Set());
+  const [modalFerramentas, setModalFerramentas] = useState<Ferramenta[]>([]);
+  const [loadingModalFerramentas, setLoadingModalFerramentas] = useState(false);
   const canInteract = isHost || allowedFerramentaIds.size > 0;
 
   const [formData, setFormData] = useState({
@@ -38,12 +40,8 @@ export default function AssistenciasTecnicasPage() {
   });
 
   const loadData = useCallback(async () => {
-    const loadId = Math.random().toString(36).substr(2, 9);
-    console.log(`🚀 [${loadId}] INÍCIO loadData()`);
-
     try {
       if (!user?.id) {
-        console.log(`❌ [${loadId}] Sem user.id, limpando dados`);
         setAssistencias([]);
         setFerramentas([]);
         setLoading(false);
@@ -52,10 +50,8 @@ export default function AssistenciasTecnicasPage() {
 
       // Hosts vinculados compartilham TODOS os recursos (mesma empresa)
       const hostId = user.role === 'host' ? user.id : user.host_id;
-      console.log(`🔍 [${loadId}] Carregando recursos da empresa. Host ID:`, hostId, '| Usuário:', user.email, '| Role:', user.role);
 
       if (!hostId) {
-        console.error(`❌ [${loadId}] hostId é null/undefined! User:`, user);
         setAssistencias([]);
         setFerramentas([]);
         setLoading(false);
@@ -64,8 +60,6 @@ export default function AssistenciasTecnicasPage() {
 
       // Buscar todos os hosts vinculados (mesma empresa)
       const linkedHostIds = await getLinkedHostIds(hostId);
-      console.log(`🔗 [${loadId}] Hosts vinculados (mesma empresa):`, linkedHostIds);
-      console.log(`🔍 [${loadId}] Buscando dados com owner_id IN:`, linkedHostIds);
 
       const [assistenciasRes, ferramentasRes] = await Promise.all([
         supabase
@@ -102,37 +96,18 @@ export default function AssistenciasTecnicasPage() {
       }
 
       if (ferramentasRes.error) {
-        console.error('❌ Erro ao carregar ferramentas:', ferramentasRes.error);
+        console.error('Erro ao carregar ferramentas:', ferramentasRes.error);
         setFerramentas([]);
       } else {
-        const allFerramentas = ferramentasRes.data || [];
-        console.log('🔧 Total ferramentas carregadas do banco:', allFerramentas.length);
-        console.log('🔧 Ferramentas retornadas:', allFerramentas.map(f => ({ id: f.id, name: f.name, status: f.status, owner_id: f.owner_id })));
-
-        const statusCount: Record<string, number> = {};
-        allFerramentas.forEach(f => {
-          statusCount[f.status] = (statusCount[f.status] || 0) + 1;
-        });
-        console.log('📊 Contagem por status:', statusCount);
-
-        const disponiveis = allFerramentas.filter(f => f.status === 'disponivel');
-        console.log('✅ Ferramentas com status "disponivel":', disponiveis.length);
-        if (disponiveis.length > 0) {
-          console.log('📋 Lista de ferramentas disponíveis:', disponiveis.map(f => ({ id: f.id, name: f.name, owner_id: f.owner_id })));
-        }
-
-        console.log(`💾 [${loadId}] Salvando`, allFerramentas.length, 'ferramentas no estado...');
-        setFerramentas(allFerramentas);
-        console.log(`✅ [${loadId}] FIM loadData() - Sucesso`);
+        setFerramentas(ferramentasRes.data || []);
       }
 
     } catch (error) {
-      console.error(`❌ [${loadId}] Erro ao carregar dados:`, error);
+      console.error('Erro ao carregar dados:', error);
       setAssistencias([]);
       setFerramentas([]);
     } finally {
       setLoading(false);
-      console.log(`🏁 [${loadId}] loadData() finalizado`);
     }
   }, [user]);
 
@@ -273,12 +248,77 @@ export default function AssistenciasTecnicasPage() {
     }
   };
 
+  const loadModalFerramentas = async () => {
+    if (!user?.id) return;
+
+    setLoadingModalFerramentas(true);
+    try {
+      console.log('🔄 Carregando ferramentas para o modal...');
+
+      const hostId = user.role === 'host' ? user.id : user.host_id;
+      if (!hostId) {
+        console.error('❌ Sem hostId');
+        setModalFerramentas([]);
+        return;
+      }
+
+      const linkedHostIds = await getLinkedHostIds(hostId);
+      console.log('🔗 Hosts vinculados:', linkedHostIds);
+
+      // Buscar TODAS as ferramentas disponíveis da empresa
+      const { data: allFerramentas, error } = await supabase
+        .from('ferramentas')
+        .select('*')
+        .in('owner_id', linkedHostIds)
+        .eq('status', 'disponivel')
+        .order('name');
+
+      if (error) {
+        console.error('❌ Erro ao buscar ferramentas:', error);
+        setModalFerramentas([]);
+        return;
+      }
+
+      console.log('✅ Total de ferramentas disponíveis no banco:', allFerramentas?.length || 0);
+
+      if (!allFerramentas || allFerramentas.length === 0) {
+        console.log('⚠️ Nenhuma ferramenta disponível encontrada');
+        setModalFerramentas([]);
+        return;
+      }
+
+      // Se for HOST: mostrar TODAS
+      if (user.role === 'host') {
+        console.log('👤 Usuário é HOST - mostrando TODAS as', allFerramentas.length, 'ferramentas');
+        setModalFerramentas(allFerramentas);
+        return;
+      }
+
+      // Se for USUÁRIO: filtrar apenas as permitidas
+      console.log('👤 Usuário comum - filtrando permissões...');
+      const permissions = await getFerramentaPermissions(user.id);
+      const allowedIds = new Set(permissions.map(p => p.ferramenta_id));
+      console.log('🔐 Permissões do usuário:', allowedIds.size, 'ferramentas');
+
+      const allowed = allFerramentas.filter(f => allowedIds.has(f.id));
+      console.log('✅ Ferramentas permitidas:', allowed.length);
+
+      setModalFerramentas(allowed);
+
+    } catch (error) {
+      console.error('❌ Erro ao carregar ferramentas do modal:', error);
+      setModalFerramentas([]);
+    } finally {
+      setLoadingModalFerramentas(false);
+    }
+  };
+
   const handleAddFerramenta = async () => {
     if (!selectedFerramentaId || !selectedAssistencia) return;
 
     setSaving(true);
     try {
-      const ferramenta = ferramentas.find(f => f.id === selectedFerramentaId);
+      const ferramenta = modalFerramentas.find(f => f.id === selectedFerramentaId);
       const fromType = ferramenta?.current_type;
       const fromId = ferramenta?.current_id;
 
@@ -337,35 +377,6 @@ export default function AssistenciasTecnicasPage() {
     }
   };
 
-  const ferramentasDisponiveis = ferramentas.filter(
-    f => {
-      // REGRA SIMPLES: Ferramenta está disponível se status === 'disponivel'
-      const isAvailable = f.status === 'disponivel';
-      const isHost = user?.role === 'host';
-      const hasPermissionInList = allowedFerramentaIds.has(f.id);
-      const hasPermission = isHost || hasPermissionInList;
-
-      if (f.status === 'disponivel') {
-        console.log(`✅ DISPONÍVEL: ${f.name} (${f.id})`);
-        console.log(`   - User role: ${user?.role}`);
-        console.log(`   - É Host? ${isHost}`);
-        console.log(`   - Está na lista de permissões? ${hasPermissionInList}`);
-        console.log(`   - Tem permissão final? ${hasPermission}`);
-        console.log(`   - Owner ID: ${f.owner_id}`);
-      } else {
-        console.log(`❌ NÃO DISPONÍVEL: ${f.name} | Status: ${f.status}`);
-      }
-
-      return isAvailable && hasPermission;
-    }
-  );
-
-  console.log('📦 Total ferramentas carregadas:', ferramentas.length);
-  console.log('📦 Ferramentas com status "disponivel":', ferramentas.filter(f => f.status === 'disponivel').length);
-  console.log('📦 Ferramentas disponíveis após filtro:', ferramentasDisponiveis.length);
-  console.log('🔐 User role:', user?.role);
-  console.log('🔐 Permissões do usuário:', allowedFerramentaIds.size, 'ferramentas');
-  console.log('🔐 IDs permitidos:', Array.from(allowedFerramentaIds));
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -524,6 +535,7 @@ export default function AssistenciasTecnicasPage() {
                     onClick={() => {
                       setSelectedAssistencia(assistencia);
                       setShowAddFerramentaModal(true);
+                      loadModalFerramentas();
                     }}
                     className="mt-4 w-full flex items-center justify-center space-x-2 px-4 py-2 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 hover:border-red-500/30 transition-all duration-200"
                   >
@@ -748,16 +760,11 @@ export default function AssistenciasTecnicasPage() {
                   <label className="block text-sm font-medium text-gray-200">
                     Selecione o Equipamento
                   </label>
-                  {user?.role !== 'host' && allowedFerramentaIds.size === 0 ? (
-                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-                      <p className="text-sm text-red-400 font-medium mb-1">
-                        Sem permissões
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        Você não tem permissão para adicionar equipamentos. Entre em contato com o administrador.
-                      </p>
+                  {loadingModalFerramentas ? (
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+                      <p className="text-sm text-gray-400">Carregando equipamentos...</p>
                     </div>
-                  ) : ferramentasDisponiveis.length === 0 ? (
+                  ) : modalFerramentas.length === 0 ? (
                     <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
                       <p className="text-sm text-yellow-400 font-medium mb-1">
                         Nenhum equipamento disponível
@@ -765,7 +772,7 @@ export default function AssistenciasTecnicasPage() {
                       <p className="text-xs text-gray-400">
                         {user?.role === 'host'
                           ? 'Todos os equipamentos estão alocados ou cadastre novos na aba Equipamentos.'
-                          : 'Todos os equipamentos permitidos para você estão alocados.'}
+                          : 'Você não tem permissão ou todos os equipamentos permitidos estão alocados.'}
                       </p>
                     </div>
                   ) : (
@@ -775,7 +782,7 @@ export default function AssistenciasTecnicasPage() {
                       className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
                     >
                       <option value="" className="bg-gray-900">Selecione...</option>
-                      {ferramentasDisponiveis.map((ferramenta) => (
+                      {modalFerramentas.map((ferramenta) => (
                         <option key={ferramenta.id} value={ferramenta.id} className="bg-gray-900">
                           {ferramenta.name} {ferramenta.modelo ? `- ${ferramenta.modelo}` : ''}
                         </option>
