@@ -111,11 +111,16 @@ export default function AssistenciasTecnicasPage() {
     const loadPermissions = async () => {
       if (!user?.id) return;
 
+      console.log('🔑 Carregando permissões para:', user.role, user.email);
+
       if (user.role === 'host') {
         const allIds = new Set(ferramentas.map(f => f.id));
+        console.log('✅ HOST - Permissão para todas as', allIds.size, 'ferramentas');
         setAllowedFerramentaIds(allIds);
       } else {
         const permissions = await getFerramentaPermissions(user.id);
+        console.log('✅ FUNCIONÁRIO - Permissões carregadas:', permissions.size, 'ferramentas');
+        console.log('Ferramentas permitidas:', Array.from(permissions));
         setAllowedFerramentaIds(permissions);
       }
     };
@@ -301,19 +306,23 @@ export default function AssistenciasTecnicasPage() {
 
   const ferramentasDisponiveis = ferramentas.filter(
     f => {
+      // Ferramenta está disponível se:
+      // 1. Status é 'disponivel' OU
+      // 2. Não está em uso, desaparecida e não tem localização definida
       const isAvailable = f.status === 'disponivel' ||
-                         (!f.current_id && !f.current_type && f.status !== 'em_uso' && f.status !== 'desaparecida');
+                         (f.status !== 'em_uso' && f.status !== 'desaparecida' && !f.current_id);
+
       const hasPermission = user?.role === 'host' || allowedFerramentaIds.has(f.id);
 
-      if (isAvailable && hasPermission) {
-        console.log('✅ Ferramenta disponível:', f.name, '| Status:', f.status, '| current_id:', f.current_id, '| current_type:', f.current_type);
-      }
+      console.log(`🔍 Ferramenta: ${f.name} | Status: ${f.status} | current_id: ${f.current_id || 'null'} | current_type: ${f.current_type || 'null'} | Disponível: ${isAvailable} | Permissão: ${hasPermission}`);
 
       return isAvailable && hasPermission;
     }
   );
 
+  console.log('📦 Total ferramentas carregadas:', ferramentas.length);
   console.log('📦 Total ferramentas disponíveis para seleção:', ferramentasDisponiveis.length);
+  console.log('🔐 Permissões do usuário:', allowedFerramentaIds.size, 'ferramentas');
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
