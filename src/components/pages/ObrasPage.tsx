@@ -8,7 +8,7 @@ import { fileToBase64 } from '../../utils/fileUtils';
 import { getFilteredObras } from '../../utils/permissions';
 
 export default function ObrasPage() {
-  const { user, getCompanyHostIds } = useAuth();
+  const { user } = useAuth();
   const { triggerRefresh } = useRefresh();
   const [obras, setObras] = useState<Obra[]>([]);
   const [loading, setLoading] = useState(true);

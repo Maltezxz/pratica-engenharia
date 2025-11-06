@@ -36,7 +36,7 @@ interface Ferramenta {
 }
 
 export default function ParametrosPage() {
-  const { user, getCompanyHostIds } = useAuth();
+  const { user } = useAuth();
   const [users, setUsers] = useState<UserWithPermissions[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
@@ -56,8 +56,26 @@ export default function ParametrosPage() {
     }
 
     try {
-      // Buscar IDs de todos os Hosts
-      const hostIds = await getCompanyHostIds?.() || [user.id];
+      // BUSCAR TODOS os hosts - tanto para HOSTS quanto para FUNCIONÁRIOS
+      const { data: hosts, error: hostsError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'host');
+
+      let hostIds: string[] = [];
+      if (hostsError) {
+        console.error('Erro ao buscar hosts:', hostsError);
+        hostIds = [user.id];
+      } else {
+        hostIds = hosts?.map(h => h.id) || [];
+      }
+
+      console.log('📊 Owner IDs (todos os hosts):', hostIds);
+
+      if (hostIds.length === 0) {
+        setLoading(false);
+        return;
+      }
 
       const [usersResult, obrasResult, ferramentasResult, obraPermissionsResult, ferramentaPermissionsResult] = await Promise.all([
         supabase
@@ -95,7 +113,7 @@ export default function ParametrosPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, getCompanyHostIds]);
+  }, [user]);
 
   useEffect(() => {
     loadData();

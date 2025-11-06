@@ -10,7 +10,7 @@ import { getFilteredObras, getFilteredFerramentas } from '../../utils/permission
 import { FerramentaImage } from '../FerramentaImage';
 
 export default function FerramentasPage() {
-  const { user, getCompanyHostIds } = useAuth();
+  const { user } = useAuth();
   const { isHost, canCreateFerramentas, canDeleteFerramentas, canTransferFerramentas, canMarkDesaparecida } = usePermissions();
   const { triggerRefresh } = useRefresh();
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);

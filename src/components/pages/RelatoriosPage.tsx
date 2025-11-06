@@ -10,7 +10,7 @@ interface MovimentacaoWithDetails extends Movimentacao {
 }
 
 export default function RelatoriosPage() {
-  const { user, getCompanyHostIds } = useAuth();
+  const { user } = useAuth();
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoWithDetails[]>([]);
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
   const [usuarios, setUsuarios] = useState<UserType[]>([]);
@@ -27,8 +27,30 @@ export default function RelatoriosPage() {
 
   const loadData = useCallback(async () => {
     try {
-      // Buscar IDs de todos os Hosts
-      const hostIds = await getCompanyHostIds?.() || [user?.id].filter(Boolean);
+      // BUSCAR TODOS os hosts - tanto para HOSTS quanto para FUNCIONÁRIOS
+      const { data: hosts, error: hostsError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'host');
+
+      let hostIds: string[] = [];
+      if (hostsError) {
+        console.error('Erro ao buscar hosts:', hostsError);
+        hostIds = [user?.id].filter(Boolean) as string[];
+      } else {
+        hostIds = hosts?.map(h => h.id) || [];
+      }
+
+      console.log('📊 Owner IDs (todos os hosts):', hostIds);
+
+      if (hostIds.length === 0) {
+        setFerramentas([]);
+        setObras([]);
+        setEstabelecimentos([]);
+        setMovimentacoes([]);
+        setLoading(false);
+        return;
+      }
 
       const [movRes, ferramRes, usersRes, obrasRes, estabRes] = await Promise.all([
         supabase
@@ -60,7 +82,7 @@ export default function RelatoriosPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, getCompanyHostIds]);
+  }, [user]);
 
   useEffect(() => {
     loadData();

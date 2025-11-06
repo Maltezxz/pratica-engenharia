@@ -39,7 +39,7 @@ interface HistoricoEntry {
 }
 
 export default function HistoricoPage() {
-  const { user, getCompanyHostIds } = useAuth();
+  const { user } = useAuth();
   const { refreshTrigger } = useRefresh();
   const [obras, setObras] = useState<HistoricoObra[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<HistoricoMovimentacao[]>([]);
@@ -64,11 +64,20 @@ export default function HistoricoPage() {
 
       let ownerIds: string[] = [];
 
-      if (user.role === 'host') {
-        ownerIds = await getCompanyHostIds?.() || [user.id];
+      // BUSCAR TODOS os hosts - tanto para HOSTS quanto para FUNCIONÁRIOS
+      const { data: hosts, error: hostsError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'host');
+
+      if (hostsError) {
+        console.error('Erro ao buscar hosts:', hostsError);
+        ownerIds = user.role === 'host' ? [user.id] : (user.host_id ? [user.host_id] : []);
       } else {
-        ownerIds = user.host_id ? [user.host_id] : [];
+        ownerIds = hosts?.map(h => h.id) || [];
       }
+
+      console.log('📊 Owner IDs (todos os hosts):', ownerIds);
 
       if (ownerIds.length === 0) {
         setObras([]);
@@ -156,7 +165,7 @@ export default function HistoricoPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, getCompanyHostIds]);
+  }, [user]);
 
   useEffect(() => {
     loadData();

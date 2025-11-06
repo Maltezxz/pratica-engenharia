@@ -7,7 +7,7 @@ import { Obra, Ferramenta } from '../../types';
 import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
 
 export default function HomePage() {
-  const { user, getCompanyHostIds } = useAuth();
+  const { user } = useAuth();
   const { refreshTrigger } = useRefresh();
   const [obras, setObras] = useState<Obra[]>([]);
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
