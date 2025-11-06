@@ -2,7 +2,6 @@ import { User } from '../types';
 
 // Credenciais de login visual (bypass de Supabase)
 export const HOST_FAKE = {
-  cnpj: '04.205.151/0001-37',
   username: 'Fernando Antunes',
   password: '123456',
 };

@@ -95,7 +95,7 @@ export default function UsuariosPage() {
       await loadFuncionarios();
 
       const accountTypeLabel = formData.accountType === 'host' ? 'Host' : 'Funcionário';
-      alert(`${accountTypeLabel} ${newEmployee.name} criado com sucesso!\n\nCredenciais de login:\nCNPJ: ${user?.cnpj || 'o mesmo do host'}\nUsuário: ${newEmployee.name}\nSenha: ${formData.password}`);
+      alert(`${accountTypeLabel} ${newEmployee.name} criado com sucesso!\n\nCredenciais de login:\nUsuário: ${newEmployee.name}\nSenha: ${formData.password}`);
     } catch (error: unknown) {
       console.error('❌ [UsuariosPage] Erro ao criar usuário:', error);
       if (error instanceof Error) {

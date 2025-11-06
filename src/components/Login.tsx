@@ -5,14 +5,13 @@ import logoImage from '../assets/pratica-logo.png';
 export default function Login() {
   console.log('🔓 Login - Componente renderizando!');
 
-  const [cnpj, setCnpj] = useState('04.205.151/0001-37');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
 
-  console.log('🔓 Login - Estado:', { cnpj, hasUsername: !!username, hasPassword: !!password });
+  console.log('🔓 Login - Estado:', { hasUsername: !!username, hasPassword: !!password });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +19,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await signIn(cnpj, username, password);
+      await signIn(username, password);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(errorMessage);
@@ -68,21 +67,6 @@ export default function Login() {
 
               <form onSubmit={handleSubmit} className="relative p-5 sm:p-8 space-y-4 sm:space-y-6">
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="cnpj" className="block text-sm font-medium text-gray-200">
-                      CNPJ
-                    </label>
-                    <input
-                      id="cnpj"
-                      type="text"
-                      value={cnpj}
-                      onChange={(e) => setCnpj(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200 backdrop-blur-xl"
-                      placeholder="00.000.000/0000-00"
-                      required
-                    />
-                  </div>
-
                   <div className="space-y-2">
                     <label htmlFor="username" className="block text-sm font-medium text-gray-200">
                       Usuário

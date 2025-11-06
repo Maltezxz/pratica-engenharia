@@ -37,13 +37,12 @@ export default function ObrasPage() {
 
       let ownerIds: string[] = [];
 
-      // Para HOSTS: buscar TODOS os hosts do mesmo CNPJ (todos veem a mesma coisa)
+      // Para HOSTS: buscar TODOS os hosts (todos veem a mesma coisa)
       if (user.role === 'host') {
         const { data: hosts, error: hostsError } = await supabase
           .from('users')
           .select('id')
-          .eq('role', 'host')
-          .eq('cnpj', user.cnpj);
+          .eq('role', 'host');
 
         if (hostsError) {
           console.error('Erro ao buscar hosts:', hostsError);

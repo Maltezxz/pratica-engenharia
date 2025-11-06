@@ -56,7 +56,7 @@ export default function ParametrosPage() {
     }
 
     try {
-      // Buscar IDs de todos os Hosts com mesmo CNPJ
+      // Buscar IDs de todos os Hosts
       const hostIds = await getCompanyHostIds?.() || [user.id];
 
       const [usersResult, obrasResult, ferramentasResult, obraPermissionsResult, ferramentaPermissionsResult] = await Promise.all([
@@ -262,15 +262,6 @@ export default function ParametrosPage() {
                   <p className="text-white">{user?.email}</p>
                 </div>
               </div>
-              {user?.cnpj && (
-                <div className="flex items-start space-x-3 p-4 rounded-xl bg-white/5">
-                  <Building2 className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 mb-1">CNPJ</p>
-                    <p className="text-white">{user.cnpj}</p>
-                  </div>
-                </div>
-              )}
               <div className="flex items-start space-x-3 p-4 rounded-xl bg-white/5">
                 <Shield className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div className="flex-1">

@@ -3,7 +3,6 @@ export interface User {
   user_id?: number;
   name: string;
   email: string;
-  cnpj?: string;
   role: 'host' | 'funcionario';
   host_id?: string;
   created_at: string;
@@ -90,10 +89,10 @@ export interface AuthContextType {
   user: User | null;
   session: unknown;
   loading: boolean;
-  signIn: (cnpj: string, username: string, password: string) => Promise<void>;
+  signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   syncUserIds?: (authUserId: string, tableUserId: string) => Promise<boolean>;
-  addEmployee?: (employeeData: Omit<User, 'id' | 'created_at' | 'updated_at' | 'host_id' | 'cnpj'>, password: string) => Promise<User>;
+  addEmployee?: (employeeData: Omit<User, 'id' | 'created_at' | 'updated_at' | 'host_id'>, password: string) => Promise<User>;
   removeEmployee?: (employeeId: string) => Promise<void>;
   getEmployees?: () => Promise<User[]>;
   getCompanyHostIds?: () => Promise<string[]>;

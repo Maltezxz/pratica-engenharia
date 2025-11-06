@@ -27,7 +27,7 @@ export default function RelatoriosPage() {
 
   const loadData = useCallback(async () => {
     try {
-      // Buscar IDs de todos os Hosts com mesmo CNPJ
+      // Buscar IDs de todos os Hosts
       const hostIds = await getCompanyHostIds?.() || [user?.id].filter(Boolean);
 
       const [movRes, ferramRes, usersRes, obrasRes, estabRes] = await Promise.all([

@@ -62,7 +62,7 @@ export default function HomePage() {
         return;
       }
 
-      console.log('🔄 [HOME] Carregando dados para:', user.name, 'Role:', user.role, 'CNPJ:', user.cnpj);
+      console.log('🔄 [HOME] Carregando dados para:', user.name, 'Role:', user.role);
 
       // BUSCAR APENAS OS CAMPOS NECESSÁRIOS - OTIMIZADO
       const [obrasRes, ferramRes, historicoRes] = await Promise.all([
@@ -94,7 +94,7 @@ export default function HomePage() {
         historico: historicoRes.data?.length || 0
       });
 
-      // Filtrar obras por CNPJ
+      // Processar obras
       if (obrasRes.error) {
         console.error('❌ Erro obras:', obrasRes.error);
         setObras([]);
@@ -105,7 +105,7 @@ export default function HomePage() {
         console.log('✅ Obras carregadas:', allObras.length);
       }
 
-      // Filtrar ferramentas por CNPJ
+      // Processar ferramentas
       if (ferramRes.error) {
         console.error('❌ Erro ferramentas:', ferramRes.error);
         setFerramentas([]);
@@ -116,7 +116,7 @@ export default function HomePage() {
         console.log('✅ Ferramentas carregadas:', allFerramentas.length);
       }
 
-      // Filtrar histórico por CNPJ
+      // Processar histórico
       if (historicoRes.error) {
         console.error('❌ Erro histórico:', historicoRes.error);
         setAtividadesRecentes([]);

@@ -153,15 +153,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signIn = async (cnpj: string, username: string, password: string) => {
+  const signIn = async (username: string, password: string) => {
     try {
-      console.log('🔍 Tentando login com:', { cnpj, username });
+      console.log('🔍 Tentando login com:', { username });
 
-      // 1. Buscar usuário pelo CNPJ e nome
+      // 1. Buscar usuário pelo nome
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('cnpj', cnpj.trim())
         .ilike('name', username.trim())
         .maybeSingle();
 
@@ -171,7 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!userData) {
-        throw new Error('Usuário não encontrado. Verifique o CNPJ e nome de usuário.');
+        throw new Error('Usuário não encontrado. Verifique o nome de usuário.');
       }
 
       console.log('✅ Usuário encontrado:', userData);
@@ -215,8 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: hosts } = await supabase
           .from('users')
           .select('id')
-          .eq('role', 'host')
-          .eq('cnpj', userData.cnpj);
+          .eq('role', 'host');
 
         if (hosts) {
           const hostIds = hosts.map(h => h.id);
@@ -243,14 +241,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addEmployee = async (
-    employeeData: Omit<User, 'id' | 'created_at' | 'updated_at' | 'host_id' | 'cnpj'>,
+    employeeData: Omit<User, 'id' | 'created_at' | 'updated_at' | 'host_id'>,
     password: string
   ) => {
     if (user?.role !== 'host') {
       throw new Error('Apenas hosts podem cadastrar funcionários');
     }
 
-    const hostCnpj = user.cnpj;
     console.log('[addEmployee] Iniciando cadastro:', { name: employeeData.name, email: employeeData.email });
 
     try {
@@ -262,7 +259,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: employeeData.email,
           role: employeeData.role, // pode ser 'funcionario' ou 'host'
           host_id: employeeData.role === 'host' ? null : user.id, // host não tem host_id
-          cnpj: hostCnpj,
         })
         .select()
         .single();
@@ -332,10 +328,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Buscar IDs de todos os Hosts com mesmo CNPJ
+      // Buscar IDs de todos os Hosts
       const hostIds = await getCompanyHostIds();
 
-      // Buscar funcionários criados por QUALQUER host do mesmo CNPJ
+      // Buscar funcionários criados por QUALQUER host
       const { data: funcionarios, error: funcError } = await supabase
         .from('users')
         .select('*')
@@ -347,12 +343,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Erro ao buscar funcionários:', funcError);
       }
 
-      // Buscar outros hosts do mesmo CNPJ (excluir o próprio usuário)
+      // Buscar outros hosts (excluir o próprio usuário)
       const { data: hosts, error: hostError } = await supabase
         .from('users')
         .select('*')
         .eq('role', 'host')
-        .eq('cnpj', user.cnpj)
         .neq('id', user.id)
         .order('name');
 
@@ -384,8 +379,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: hosts, error } = await supabase
         .from('users')
         .select('id')
-        .eq('role', 'host')
-        .eq('cnpj', user.cnpj);
+        .eq('role', 'host');
 
       if (error) {
         console.error('Erro ao buscar IDs dos hosts:', error);
