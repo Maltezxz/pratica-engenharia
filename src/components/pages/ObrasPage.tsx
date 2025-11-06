@@ -37,33 +37,22 @@ export default function ObrasPage() {
 
       console.log('🔄 Carregando obras para:', user.name, user.role);
 
-      let ownerIds: string[] = [];
+      // Obras são da EMPRESA (host), cada usuário vê apenas as do seu host
+      const hostId = user.role === 'host' ? user.id : user.host_id;
 
-      // BUSCAR TODOS os hosts - tanto para HOSTS quanto para FUNCIONÁRIOS
-      const { data: hosts, error: hostsError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'host');
-
-      if (hostsError) {
-        console.error('Erro ao buscar hosts:', hostsError);
-        ownerIds = user.role === 'host' ? [user.id] : (user.host_id ? [user.host_id] : []);
-      } else {
-        ownerIds = hosts?.map(h => h.id) || [];
-      }
-
-      console.log('📊 Owner IDs (todos os hosts):', ownerIds);
-
-      if (ownerIds.length === 0) {
+      if (!hostId) {
+        console.warn('⚠️ Nenhum host_id encontrado');
         setObras([]);
         setLoading(false);
         return;
       }
 
+      console.log('🔍 Buscando obras da empresa. Host ID:', hostId);
+
       const { data, error } = await supabase
         .from('obras')
         .select('id, title, description, endereco, start_date, engenheiro, status, owner_id, created_at, updated_at')
-        .in('owner_id', ownerIds)
+        .eq('owner_id', hostId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -156,7 +145,7 @@ export default function ObrasPage() {
           descricao: `Obra "${data.title}" foi atualizada`,
           obra_id: data.id,
           user_id: user.id,
-          owner_id: user.id,
+          owner_id: user.role === 'host' ? user.id : user.host_id,
           metadata: {
             endereco: data.endereco,
             engenheiro: data.engenheiro,
@@ -168,7 +157,7 @@ export default function ObrasPage() {
         // Criar nova obra
         const newObraData = {
           ...obraData,
-          owner_id: user.id,
+          owner_id: user.role === 'host' ? user.id : user.host_id,
         };
 
         console.log('Criando obra com dados:', newObraData);
@@ -191,7 +180,7 @@ export default function ObrasPage() {
           descricao: `Obra "${data.title}" foi criada`,
           obra_id: data.id,
           user_id: user.id,
-          owner_id: user.id,
+          owner_id: user.role === 'host' ? user.id : user.host_id,
           metadata: {
             endereco: data.endereco,
             engenheiro: data.engenheiro,

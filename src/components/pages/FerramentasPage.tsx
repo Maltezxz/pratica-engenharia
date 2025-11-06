@@ -67,25 +67,11 @@ export default function FerramentasPage() {
 
       console.log(`🔄 [TENTATIVA ${retryCount + 1}] Carregando ferramentas para:`, user.name, user.role, user.id);
 
-      let ownerIds: string[] = [];
+      // Ferramentas são da EMPRESA (host), cada usuário vê apenas as do seu host
+      const hostId = user.role === 'host' ? user.id : user.host_id;
 
-      // BUSCAR TODOS os hosts - tanto para HOSTS quanto para FUNCIONÁRIOS
-      const { data: hosts, error: hostsError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'host');
-
-      if (hostsError) {
-        console.error('❌ Erro ao buscar hosts:', hostsError);
-        ownerIds = user.role === 'host' ? [user.id] : (user.host_id ? [user.host_id] : []);
-      } else {
-        ownerIds = hosts?.map(h => h.id) || [];
-      }
-
-      console.log('📊 Owner IDs (todos os hosts):', ownerIds);
-
-      if (ownerIds.length === 0) {
-        console.warn('⚠️ Nenhum owner_id encontrado, limpando dados');
+      if (!hostId) {
+        console.warn('⚠️ Nenhum host_id encontrado, limpando dados');
         setFerramentas([]);
         setObras([]);
         setLoading(false);
@@ -93,12 +79,12 @@ export default function FerramentasPage() {
       }
 
       // BUSCAR FERRAMENTAS COM TIMEOUT (SEM IMAGENS PARA PERFORMANCE)
-      console.log('🔍 Buscando ferramentas no Supabase com owner_ids:', ownerIds);
+      console.log('🔍 Buscando ferramentas da empresa. Host ID:', hostId);
 
       const ferramentasPromise = supabase
         .from('ferramentas')
         .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, descricao, nf, data, valor, tempo_garantia_dias, garantia, marca, numero_lacre, numero_placa, adesivo, usuario, obra, created_at, updated_at, tipo')
-        .in('owner_id', ownerIds)
+        .eq('owner_id', hostId)
         .order('created_at', { ascending: false });
 
       const timeoutPromise = new Promise((_, reject) =>
@@ -143,13 +129,13 @@ export default function FerramentasPage() {
         supabase
           .from('obras')
           .select('*')
-          .in('owner_id', ownerIds)
+          .eq('owner_id', hostId)
           .eq('status', 'ativa')
           .order('created_at', { ascending: false }),
         supabase
           .from('assistencias_tecnicas')
           .select('*')
-          .in('owner_id', ownerIds)
+          .eq('owner_id', hostId)
           .eq('status', 'ativa')
           .order('created_at', { ascending: false})
       ]);
