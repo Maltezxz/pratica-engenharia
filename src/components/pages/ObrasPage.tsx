@@ -37,24 +37,20 @@ export default function ObrasPage() {
 
       let ownerIds: string[] = [];
 
-      // Para HOSTS: buscar TODOS os hosts (todos veem a mesma coisa)
-      if (user.role === 'host') {
-        const { data: hosts, error: hostsError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('role', 'host');
+      // BUSCAR TODOS os hosts - tanto para HOSTS quanto para FUNCIONÁRIOS
+      const { data: hosts, error: hostsError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'host');
 
-        if (hostsError) {
-          console.error('Erro ao buscar hosts:', hostsError);
-          ownerIds = [user.id];
-        } else {
-          ownerIds = hosts?.map(h => h.id) || [user.id];
-        }
-        console.log('📊 Host Owner IDs:', ownerIds);
+      if (hostsError) {
+        console.error('Erro ao buscar hosts:', hostsError);
+        ownerIds = user.role === 'host' ? [user.id] : (user.host_id ? [user.host_id] : []);
       } else {
-        // Para FUNCIONÁRIOS: usar apenas o host_id dele
-        ownerIds = user.host_id ? [user.host_id] : [];
+        ownerIds = hosts?.map(h => h.id) || [];
       }
+
+      console.log('📊 Owner IDs (todos os hosts):', ownerIds);
 
       if (ownerIds.length === 0) {
         setObras([]);
