@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
+  const [companyHostIdsCache, setCompanyHostIdsCache] = useState<string[]>([]);
 
   useEffect(() => {
     console.log('🔐 AuthProvider - Verificando sessão salva...');
@@ -207,6 +208,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 4. Definir usuário logado e salvar em cookie
       setUser(userData);
       setCookie(AUTH_COOKIE_NAME, userData.id, COOKIE_EXPIRES_DAYS);
+
+      // 5. Pre-carregar cache de host IDs se for host
+      if (userData.role === 'host') {
+        console.log('🔄 Pre-carregando cache de host IDs...');
+        const { data: hosts } = await supabase
+          .from('users')
+          .select('id')
+          .eq('role', 'host')
+          .eq('cnpj', userData.cnpj);
+
+        if (hosts) {
+          const hostIds = hosts.map(h => h.id);
+          setCompanyHostIdsCache(hostIds);
+          console.log('✅ Cache pre-carregado:', hostIds);
+        }
+      }
+
       setLoading(false);
 
     } catch (error: unknown) {
@@ -355,7 +373,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return [];
     }
 
+    // Retornar cache se já foi carregado
+    if (companyHostIdsCache.length > 0) {
+      console.log('💾 Usando cache de host IDs:', companyHostIdsCache);
+      return companyHostIdsCache;
+    }
+
     try {
+      console.log('🔍 Buscando host IDs do banco...');
       const { data: hosts, error } = await supabase
         .from('users')
         .select('id')
@@ -367,7 +392,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return [user.id];
       }
 
-      return hosts?.map(h => h.id) || [user.id];
+      const hostIds = hosts?.map(h => h.id) || [user.id];
+      setCompanyHostIdsCache(hostIds);
+      console.log('✅ Cache de host IDs atualizado:', hostIds);
+      return hostIds;
     } catch (error) {
       console.error('Erro ao buscar IDs dos hosts:', error);
       return [user.id];

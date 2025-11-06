@@ -65,24 +65,15 @@ export default function HomePage() {
 
       let ownerIds: string[] = [];
 
-      // Para HOSTS: buscar TODOS os hosts do mesmo CNPJ (todos veem a mesma coisa)
-      if (user.role === 'host') {
-        const { data: hosts, error: hostsError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('role', 'host')
-          .eq('cnpj', user.cnpj);
-
-        if (hostsError) {
-          console.error('Erro ao buscar hosts:', hostsError);
-          ownerIds = [user.id];
-        } else {
-          ownerIds = hosts?.map(h => h.id) || [user.id];
-        }
-        console.log('📊 Host Owner IDs:', ownerIds);
-      } else {
+      // Para HOSTS: usar getCompanyHostIds que já está otimizado
+      if (user.role === 'host' && getCompanyHostIds) {
+        ownerIds = await getCompanyHostIds();
+        console.log('📊 Host Owner IDs (cached):', ownerIds);
+      } else if (user.role === 'funcionario') {
         // Para FUNCIONÁRIOS: usar apenas o host_id dele
         ownerIds = user.host_id ? [user.host_id] : [];
+      } else {
+        ownerIds = [user.id];
       }
 
       if (ownerIds.length === 0) {
@@ -92,20 +83,36 @@ export default function HomePage() {
         return;
       }
 
-      // BUSCAR OBRAS
-      const obrasRes = await supabase
-        .from('obras')
-        .select('*')
-        .in('owner_id', ownerIds)
-        .eq('status', 'ativa')
-        .order('created_at', { ascending: false });
+      // BUSCAR TUDO EM PARALELO para reduzir tempo de espera
+      const [obrasRes, ferramRes, historicoRes] = await Promise.all([
+        // OBRAS ATIVAS
+        supabase
+          .from('obras')
+          .select('*')
+          .in('owner_id', ownerIds)
+          .eq('status', 'ativa')
+          .order('created_at', { ascending: false }),
 
+        // FERRAMENTAS (sem imagens pesadas)
+        supabase
+          .from('ferramentas')
+          .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, created_at')
+          .in('owner_id', ownerIds),
+
+        // HISTÓRICO
+        supabase
+          .from('historico')
+          .select('*')
+          .in('owner_id', ownerIds)
+          .order('created_at', { ascending: false })
+          .limit(5)
+      ]);
+
+      // Processar obras
       if (obrasRes.error) {
         console.error('Erro ao carregar obras:', obrasRes.error);
       } else {
         const allObras = obrasRes.data || [];
-
-        // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
         if (user.role === 'host') {
           setObras(allObras);
           console.log('✅ HOST vê todas as obras:', allObras.length);
@@ -116,29 +123,16 @@ export default function HomePage() {
         }
       }
 
-      // BUSCAR FERRAMENTAS - SEM image_url e nf_image_url para evitar timeout com imagens grandes
-      console.log('🔍 Buscando ferramentas com owner_ids:', ownerIds);
-      const ferramRes = await supabase
-        .from('ferramentas')
-        .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, created_at')
-        .in('owner_id', ownerIds);
-
+      // Processar ferramentas
       if (ferramRes.error) {
         console.error('❌ Erro ao carregar ferramentas:', ferramRes.error);
       } else {
         const allFerramentas = ferramRes.data || [];
-        console.log('📦 Ferramentas retornadas do banco:', allFerramentas.length, allFerramentas);
+        console.log('📦 Ferramentas retornadas:', allFerramentas.length);
 
-        // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
         if (user.role === 'host') {
           setFerramentas(allFerramentas);
           console.log('✅ HOST vê todas as ferramentas:', allFerramentas.length);
-          console.log('📊 Por status:', {
-            disponiveis: allFerramentas.filter(f => f.status === 'disponivel').length,
-            em_uso: allFerramentas.filter(f => f.status === 'em_uso').length,
-            desaparecidas: allFerramentas.filter(f => f.status === 'desaparecida').length,
-            total_nao_desaparecidas: allFerramentas.filter(f => f.status !== 'desaparecida').length
-          });
         } else {
           const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
           setFerramentas(filteredFerramentas);
@@ -146,14 +140,7 @@ export default function HomePage() {
         }
       }
 
-      // BUSCAR HISTÓRICO
-      const historicoRes = await supabase
-        .from('historico')
-        .select('*')
-        .in('owner_id', ownerIds)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
+      // Processar histórico
       if (historicoRes.error) {
         console.error('Erro ao carregar histórico:', historicoRes.error);
       } else {
@@ -165,31 +152,10 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, getCompanyHostIds]);
 
   useEffect(() => {
     loadData();
-
-    // Configurar realtime para atividades recentes
-    const historicoChannel = supabase
-      .channel('historico-home-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'historico',
-        },
-        (payload) => {
-          console.log('📡 Atualização em tempo real no histórico:', payload);
-          loadData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(historicoChannel);
-    };
   }, [loadData, refreshTrigger]);
 
   const totalEquipamentos = ferramentas.filter(f => f.status !== 'desaparecida').length;
@@ -233,8 +199,41 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
+      <div className="space-y-8 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-8 w-64 bg-white/10 rounded-lg animate-pulse"></div>
+            <div className="h-4 w-48 bg-white/5 rounded animate-pulse"></div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-white/10 rounded-xl animate-pulse"></div>
+                <div className="w-5 h-5 bg-white/5 rounded animate-pulse"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-8 w-16 bg-white/10 rounded animate-pulse"></div>
+                <div className="h-4 w-24 bg-white/5 rounded animate-pulse"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1, 2].map((i) => (
+            <div key={i} className="relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6">
+              <div className="h-6 w-32 bg-white/10 rounded animate-pulse mb-6"></div>
+              <div className="space-y-3">
+                {[1, 2, 3].map((j) => (
+                  <div key={j} className="h-24 bg-white/5 rounded-xl animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
