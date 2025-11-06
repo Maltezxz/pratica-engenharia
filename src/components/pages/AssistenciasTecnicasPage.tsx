@@ -324,12 +324,19 @@ export default function AssistenciasTecnicasPage() {
     f => {
       // REGRA SIMPLES: Ferramenta está disponível se status === 'disponivel'
       const isAvailable = f.status === 'disponivel';
-      const hasPermission = user?.role === 'host' || allowedFerramentaIds.has(f.id);
+      const isHost = user?.role === 'host';
+      const hasPermissionInList = allowedFerramentaIds.has(f.id);
+      const hasPermission = isHost || hasPermissionInList;
 
       if (f.status === 'disponivel') {
-        console.log(`✅ DISPONÍVEL: ${f.name} | Permissão: ${hasPermission}`);
+        console.log(`✅ DISPONÍVEL: ${f.name} (${f.id})`);
+        console.log(`   - User role: ${user?.role}`);
+        console.log(`   - É Host? ${isHost}`);
+        console.log(`   - Está na lista de permissões? ${hasPermissionInList}`);
+        console.log(`   - Tem permissão final? ${hasPermission}`);
+        console.log(`   - Owner ID: ${f.owner_id}`);
       } else {
-        console.log(`❌ NÃO DISPONÍVEL: ${f.name} | Status: ${f.status} | current_id: ${f.current_id || 'null'}`);
+        console.log(`❌ NÃO DISPONÍVEL: ${f.name} | Status: ${f.status}`);
       }
 
       return isAvailable && hasPermission;
@@ -338,8 +345,10 @@ export default function AssistenciasTecnicasPage() {
 
   console.log('📦 Total ferramentas carregadas:', ferramentas.length);
   console.log('📦 Ferramentas com status "disponivel":', ferramentas.filter(f => f.status === 'disponivel').length);
-  console.log('📦 Ferramentas disponíveis após filtro de permissões:', ferramentasDisponiveis.length);
+  console.log('📦 Ferramentas disponíveis após filtro:', ferramentasDisponiveis.length);
+  console.log('🔐 User role:', user?.role);
   console.log('🔐 Permissões do usuário:', allowedFerramentaIds.size, 'ferramentas');
+  console.log('🔐 IDs permitidos:', Array.from(allowedFerramentaIds));
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
