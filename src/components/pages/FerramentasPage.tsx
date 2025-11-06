@@ -431,13 +431,21 @@ export default function FerramentasPage() {
     const newStatus = ferramenta.status === 'desaparecida' ? 'em_uso' : 'desaparecida';
 
     try {
+      console.log('🔄 Atualizando status de', ferramenta.name, 'para', newStatus);
+
       const { error } = await supabase
         .from('ferramentas')
         .update({ status: newStatus })
         .eq('id', ferramenta.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao atualizar status:', error);
+        throw error;
+      }
 
+      console.log('✅ Status atualizado com sucesso');
+
+      // Registrar no histórico
       if (newStatus === 'desaparecida') {
         await supabase.from('historico').insert({
           tipo_evento: 'movimentacao',
@@ -453,11 +461,23 @@ export default function FerramentasPage() {
         });
       }
 
-      await loadData();
+      // Atualizar estado local imediatamente
+      setFerramentas(prev => prev.map(f =>
+        f.id === ferramenta.id ? { ...f, status: newStatus } : f
+      ));
+
+      // Recarregar dados em background
+      loadData().catch(err => {
+        console.warn('⚠️ Erro ao recarregar dados, mas status foi atualizado:', err);
+      });
+
       triggerRefresh();
+
+      alert(`Equipamento marcado como ${newStatus === 'desaparecida' ? 'desaparecido' : 'encontrado'}!`);
     } catch (error) {
-      console.error('Error updating status:', error);
-      alert('Erro ao atualizar status');
+      console.error('❌ Erro ao atualizar status:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert(`Erro ao atualizar status: ${errorMessage}`);
     }
   };
 
