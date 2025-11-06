@@ -5,7 +5,7 @@ import logoImage from '../assets/pratica-logo.png';
 export default function Login() {
   console.log('🔓 Login - Componente renderizando!');
 
-  const [cnpj, setCnpj] = useState(import.meta.env.VITE_DEFAULT_CNPJ || '');
+  const [cnpj, setCnpj] = useState('04.205.151/0001-37');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
