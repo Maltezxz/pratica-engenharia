@@ -94,7 +94,7 @@ export default function FerramentasPage() {
 
       const ferramentasPromise = supabase
         .from('ferramentas')
-        .select('*')
+        .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, descricao, nf, nf_image_url, image_url, data, valor, tempo_garantia_dias, garantia, marca, numero_lacre, numero_placa, adesivo, usuario, obra, created_at, updated_at, tipo')
         .in('owner_id', ownerIds)
         .order('created_at', { ascending: false });
 
