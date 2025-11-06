@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Wrench, Plus, X, Edit, Trash2, MapPin, Phone, FileText, Calendar } from 'lucide-react';
+import { Wrench, Plus, X, Edit, Trash2, MapPin, Phone, FileText, Calendar, Lock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { usePermissions } from '../../hooks/usePermissions';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { getFerramentaPermissions } from '../../utils/permissions';
@@ -13,6 +14,7 @@ interface AssistenciaWithFerramentas extends AssistenciaTecnica {
 
 export default function AssistenciasTecnicasPage() {
   const { user } = useAuth();
+  const { isHost } = usePermissions();
   const { refreshTrigger, triggerRefresh } = useRefresh();
   const { showToast } = useNotification();
   const [assistencias, setAssistencias] = useState<AssistenciaWithFerramentas[]>([]);
@@ -25,6 +27,7 @@ export default function AssistenciasTecnicasPage() {
   const [selectedFerramentaId, setSelectedFerramentaId] = useState('');
   const [saving, setSaving] = useState(false);
   const [allowedFerramentaIds, setAllowedFerramentaIds] = useState<Set<string>>(new Set());
+  const canInteract = isHost || allowedFerramentaIds.size > 0;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -343,15 +346,29 @@ export default function AssistenciasTecnicasPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-white mb-2">Assistências Técnicas</h1>
-          <p className="text-gray-400">Gerencie as assistências técnicas e equipamentos</p>
+          <p className="text-gray-400">
+            {isHost
+              ? 'Gerencie as assistências técnicas e equipamentos'
+              : canInteract
+              ? 'Visualize e gerencie equipamentos com permissão'
+              : 'Visualização das assistências técnicas'}
+          </p>
+          {!isHost && !canInteract && (
+            <div className="flex items-center space-x-2 mt-2 text-yellow-400 text-sm">
+              <Lock className="w-4 h-4" />
+              <span>Modo somente leitura - Sem permissões de edição</span>
+            </div>
+          )}
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all duration-200"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Nova Assistência</span>
-        </button>
+        {isHost && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all duration-200"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Nova Assistência</span>
+          </button>
+        )}
       </div>
 
       {assistencias.length === 0 ? (
@@ -391,29 +408,31 @@ export default function AssistenciasTecnicasPage() {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => {
-                        setSelectedAssistencia(assistencia);
-                        setFormData({
-                          name: assistencia.name,
-                          endereco: assistencia.endereco || '',
-                          contato: assistencia.contato || '',
-                          observacoes: assistencia.observacoes || '',
-                        });
-                        setShowEditModal(true);
-                      }}
-                      className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-200"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteAssistencia(assistencia)}
-                      className="p-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-all duration-200"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {isHost && (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => {
+                          setSelectedAssistencia(assistencia);
+                          setFormData({
+                            name: assistencia.name,
+                            endereco: assistencia.endereco || '',
+                            contato: assistencia.contato || '',
+                            observacoes: assistencia.observacoes || '',
+                          });
+                          setShowEditModal(true);
+                        }}
+                        className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-200"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAssistencia(assistencia)}
+                        className="p-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-all duration-200"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {assistencia.ferramentas && assistencia.ferramentas.length > 0 && (
@@ -448,16 +467,23 @@ export default function AssistenciasTecnicasPage() {
                   </div>
                 )}
 
-                <button
-                  onClick={() => {
-                    setSelectedAssistencia(assistencia);
-                    setShowAddFerramentaModal(true);
-                  }}
-                  className="mt-4 w-full flex items-center justify-center space-x-2 px-4 py-2 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 hover:border-red-500/30 transition-all duration-200"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="text-sm">Adicionar Equipamento</span>
-                </button>
+                {canInteract ? (
+                  <button
+                    onClick={() => {
+                      setSelectedAssistencia(assistencia);
+                      setShowAddFerramentaModal(true);
+                    }}
+                    className="mt-4 w-full flex items-center justify-center space-x-2 px-4 py-2 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 hover:border-red-500/30 transition-all duration-200"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="text-sm">Adicionar Equipamento</span>
+                  </button>
+                ) : (
+                  <div className="mt-4 w-full flex items-center justify-center space-x-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-500 rounded-xl cursor-not-allowed opacity-50">
+                    <Lock className="w-4 h-4" />
+                    <span className="text-sm">Sem permissão para adicionar</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
