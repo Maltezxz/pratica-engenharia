@@ -1,14 +1,21 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Cache de imagens em memória
+// Cache de imagens em memória para quando precisar buscar do banco
 const imageCache = new Map<string, string>();
 
-export function useFerramentaImage(ferramentaId: string) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useFerramentaImage(ferramentaId: string, initialImageUrl?: string) {
+  const [imageUrl, setImageUrl] = useState<string | null>(initialImageUrl || null);
+  const [loading, setLoading] = useState(!initialImageUrl);
 
   useEffect(() => {
+    // Se já tem a URL inicial, não precisa buscar
+    if (initialImageUrl) {
+      setImageUrl(initialImageUrl);
+      setLoading(false);
+      return;
+    }
+
     let isMounted = true;
 
     async function loadImage() {
@@ -50,7 +57,7 @@ export function useFerramentaImage(ferramentaId: string) {
     return () => {
       isMounted = false;
     };
-  }, [ferramentaId]);
+  }, [ferramentaId, initialImageUrl]);
 
   return { imageUrl, loading };
 }

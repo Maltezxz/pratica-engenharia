@@ -5,10 +5,11 @@ interface FerramentaImageProps {
   ferramentaId: string;
   alt: string;
   className?: string;
+  imageUrl?: string;
 }
 
-export function FerramentaImage({ ferramentaId, alt, className = '' }: FerramentaImageProps) {
-  const { imageUrl, loading } = useFerramentaImage(ferramentaId);
+export function FerramentaImage({ ferramentaId, alt, className = '', imageUrl: initialImageUrl }: FerramentaImageProps) {
+  const { imageUrl, loading } = useFerramentaImage(ferramentaId, initialImageUrl);
 
   if (loading) {
     return (
