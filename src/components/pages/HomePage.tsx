@@ -64,26 +64,28 @@ export default function HomePage() {
 
       console.log('🔄 [HOME] Carregando dados para:', user.name, 'Role:', user.role, 'CNPJ:', user.cnpj);
 
-      // BUSCAR TUDO EM PARALELO - SEM FILTROS (deixar o banco fazer o trabalho)
+      // BUSCAR APENAS OS CAMPOS NECESSÁRIOS - OTIMIZADO
       const [obrasRes, ferramRes, historicoRes] = await Promise.all([
-        // TODAS AS OBRAS ATIVAS
+        // OBRAS ATIVAS - apenas campos necessários para o card
         supabase
           .from('obras')
-          .select('*')
+          .select('id, title, endereco, engenheiro, image_url, created_at')
           .eq('status', 'ativa')
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .limit(5),
 
-        // TODAS AS FERRAMENTAS
+        // FERRAMENTAS - apenas campos para contagem
         supabase
           .from('ferramentas')
-          .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, created_at'),
+          .select('id, current_type, current_id, status')
+          .neq('status', 'desaparecida'),
 
-        // TODO O HISTÓRICO RECENTE
+        // HISTÓRICO RECENTE - apenas últimas 5 atividades
         supabase
           .from('historico')
-          .select('*')
+          .select('id, tipo_evento, descricao, created_at')
           .order('created_at', { ascending: false })
-          .limit(10)
+          .limit(5)
       ]);
 
       console.log('📥 Respostas recebidas:', {
@@ -139,8 +141,19 @@ export default function HomePage() {
     loadData();
   }, [loadData, refreshTrigger]);
 
-  const totalEquipamentos = ferramentas.filter(f => f.status !== 'desaparecida').length;
-  const totalDesaparecidos = ferramentas.filter(f => f.status === 'desaparecida').length;
+  const totalEquipamentos = ferramentas.length;
+  const [totalDesaparecidos, setTotalDesaparecidos] = useState(0);
+
+  useEffect(() => {
+    const fetchDesaparecidos = async () => {
+      const { count } = await supabase
+        .from('ferramentas')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'desaparecida');
+      setTotalDesaparecidos(count || 0);
+    };
+    fetchDesaparecidos();
+  }, []);
 
   console.log('📊 RENDER HomePage - Stats:', {
     obras: obras.length,

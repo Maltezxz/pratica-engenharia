@@ -67,21 +67,21 @@ export default function ParametrosPage() {
           .order('created_at', { ascending: false }),
         supabase
           .from('obras')
-          .select('*')
+          .select('id, title, endereco, engenheiro')
           .in('owner_id', hostIds)
           .order('title', { ascending: true }),
         supabase
           .from('ferramentas')
-          .select('id, name, tipo, modelo, serial, status')
+          .select('id, name, tipo, modelo, serial')
           .in('owner_id', hostIds)
           .order('name', { ascending: true }),
         supabase
           .from('user_obra_permissions')
-          .select('*')
+          .select('id, user_id, obra_id, host_id')
           .in('host_id', hostIds),
         supabase
           .from('user_ferramenta_permissions')
-          .select('*')
+          .select('id, user_id, ferramenta_id, host_id')
           .in('host_id', hostIds)
       ]);
 
