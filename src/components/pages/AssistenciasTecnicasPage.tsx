@@ -53,6 +53,7 @@ export default function AssistenciasTecnicasPage() {
       // Buscar todos os hosts vinculados (mesma empresa)
       const linkedHostIds = await getLinkedHostIds(hostId);
       console.log('🔗 Hosts vinculados (mesma empresa):', linkedHostIds);
+      console.log('🔍 Buscando dados com owner_id IN:', linkedHostIds);
 
       const [assistenciasRes, ferramentasRes] = await Promise.all([
         supabase
@@ -89,11 +90,12 @@ export default function AssistenciasTecnicasPage() {
       }
 
       if (ferramentasRes.error) {
-        console.error('Erro ao carregar ferramentas:', ferramentasRes.error);
+        console.error('❌ Erro ao carregar ferramentas:', ferramentasRes.error);
         setFerramentas([]);
       } else {
         const allFerramentas = ferramentasRes.data || [];
         console.log('🔧 Total ferramentas carregadas do banco:', allFerramentas.length);
+        console.log('🔧 Ferramentas retornadas:', allFerramentas.map(f => ({ id: f.id, name: f.name, status: f.status, owner_id: f.owner_id })));
 
         const statusCount: Record<string, number> = {};
         allFerramentas.forEach(f => {
@@ -104,9 +106,10 @@ export default function AssistenciasTecnicasPage() {
         const disponiveis = allFerramentas.filter(f => f.status === 'disponivel');
         console.log('✅ Ferramentas com status "disponivel":', disponiveis.length);
         if (disponiveis.length > 0) {
-          console.log('Lista de ferramentas disponíveis:', disponiveis.map(f => f.name));
+          console.log('📋 Lista de ferramentas disponíveis:', disponiveis.map(f => ({ id: f.id, name: f.name, owner_id: f.owner_id })));
         }
 
+        console.log('💾 Salvando', allFerramentas.length, 'ferramentas no estado...');
         setFerramentas(allFerramentas);
       }
 
