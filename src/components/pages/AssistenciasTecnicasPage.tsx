@@ -42,16 +42,21 @@ export default function AssistenciasTecnicasPage() {
         return;
       }
 
+      const ownerIds = user.role === 'host' ? [user.id] : [user.host_id, user.id].filter(Boolean);
+      console.log('🔍 Carregando dados para owner_ids:', ownerIds);
+
       const [assistenciasRes, ferramentasRes] = await Promise.all([
         supabase
           .from('assistencias_tecnicas')
           .select('*')
+          .in('owner_id', ownerIds)
           .eq('status', 'ativa')
           .order('created_at', { ascending: false }),
 
         supabase
           .from('ferramentas')
           .select('*')
+          .in('owner_id', ownerIds)
           .neq('status', 'desaparecida'),
       ]);
 
@@ -78,7 +83,12 @@ export default function AssistenciasTecnicasPage() {
         console.error('Erro ao carregar ferramentas:', ferramentasRes.error);
         setFerramentas([]);
       } else {
-        setFerramentas(ferramentasRes.data || []);
+        const allFerramentas = ferramentasRes.data || [];
+        console.log('🔧 Total ferramentas carregadas:', allFerramentas.length);
+        console.log('Ferramentas disponíveis:', allFerramentas.filter(f =>
+          f.status === 'disponivel' || (!f.current_id && f.status !== 'em_uso')
+        ).length);
+        setFerramentas(allFerramentas);
       }
 
     } catch (error) {
@@ -288,11 +298,19 @@ export default function AssistenciasTecnicasPage() {
 
   const ferramentasDisponiveis = ferramentas.filter(
     f => {
-      const isAvailable = f.status === 'disponivel' || (!f.current_id && f.status !== 'em_uso' && f.status !== 'desaparecida');
+      const isAvailable = f.status === 'disponivel' ||
+                         (!f.current_id && !f.current_type && f.status !== 'em_uso' && f.status !== 'desaparecida');
       const hasPermission = user?.role === 'host' || allowedFerramentaIds.has(f.id);
+
+      if (isAvailable && hasPermission) {
+        console.log('✅ Ferramenta disponível:', f.name, '| Status:', f.status, '| current_id:', f.current_id, '| current_type:', f.current_type);
+      }
+
       return isAvailable && hasPermission;
     }
   );
+
+  console.log('📦 Total ferramentas disponíveis para seleção:', ferramentasDisponiveis.length);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
