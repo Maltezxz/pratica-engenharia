@@ -38,8 +38,12 @@ export default function AssistenciasTecnicasPage() {
   });
 
   const loadData = useCallback(async () => {
+    const loadId = Math.random().toString(36).substr(2, 9);
+    console.log(`🚀 [${loadId}] INÍCIO loadData()`);
+
     try {
       if (!user?.id) {
+        console.log(`❌ [${loadId}] Sem user.id, limpando dados`);
         setAssistencias([]);
         setFerramentas([]);
         setLoading(false);
@@ -48,12 +52,20 @@ export default function AssistenciasTecnicasPage() {
 
       // Hosts vinculados compartilham TODOS os recursos (mesma empresa)
       const hostId = user.role === 'host' ? user.id : user.host_id;
-      console.log('🔍 Carregando recursos da empresa. Host ID:', hostId, '| Usuário:', user.email, '| Role:', user.role);
+      console.log(`🔍 [${loadId}] Carregando recursos da empresa. Host ID:`, hostId, '| Usuário:', user.email, '| Role:', user.role);
+
+      if (!hostId) {
+        console.error(`❌ [${loadId}] hostId é null/undefined! User:`, user);
+        setAssistencias([]);
+        setFerramentas([]);
+        setLoading(false);
+        return;
+      }
 
       // Buscar todos os hosts vinculados (mesma empresa)
       const linkedHostIds = await getLinkedHostIds(hostId);
-      console.log('🔗 Hosts vinculados (mesma empresa):', linkedHostIds);
-      console.log('🔍 Buscando dados com owner_id IN:', linkedHostIds);
+      console.log(`🔗 [${loadId}] Hosts vinculados (mesma empresa):`, linkedHostIds);
+      console.log(`🔍 [${loadId}] Buscando dados com owner_id IN:`, linkedHostIds);
 
       const [assistenciasRes, ferramentasRes] = await Promise.all([
         supabase
@@ -109,16 +121,18 @@ export default function AssistenciasTecnicasPage() {
           console.log('📋 Lista de ferramentas disponíveis:', disponiveis.map(f => ({ id: f.id, name: f.name, owner_id: f.owner_id })));
         }
 
-        console.log('💾 Salvando', allFerramentas.length, 'ferramentas no estado...');
+        console.log(`💾 [${loadId}] Salvando`, allFerramentas.length, 'ferramentas no estado...');
         setFerramentas(allFerramentas);
+        console.log(`✅ [${loadId}] FIM loadData() - Sucesso`);
       }
 
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      console.error(`❌ [${loadId}] Erro ao carregar dados:`, error);
       setAssistencias([]);
       setFerramentas([]);
     } finally {
       setLoading(false);
+      console.log(`🏁 [${loadId}] loadData() finalizado`);
     }
   }, [user]);
 
