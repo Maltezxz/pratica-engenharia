@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import ObrasPage from './pages/ObrasPage';
 import UsuariosPage from './pages/UsuariosPage';
 import FerramentasPage from './pages/FerramentasPage';
+import AssistenciasTecnicasPage from './pages/AssistenciasTecnicasPage';
 import HistoricoPage from './pages/HistoricoPage';
 import ParametrosPage from './pages/ParametrosPage';
 import DesaparecidosPage from './pages/DesaparecidosPage';
@@ -26,6 +27,8 @@ export default function Dashboard() {
         return canManageUsers ? <UsuariosPage /> : <HomePage />;
       case 'ferramentas':
         return <FerramentasPage />;
+      case 'assistencias':
+        return <AssistenciasTecnicasPage />;
       case 'historico':
         return <HistoricoPage />;
       case 'parametros':

@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { useNotification } from '../../contexts/NotificationContext';
-import { Ferramenta, Obra } from '../../types';
+import { Ferramenta, Obra, AssistenciaTecnica } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
 import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
 import { FerramentaImage } from '../FerramentaImage';
@@ -17,6 +17,7 @@ export default function FerramentasPage() {
   const { showToast, showConfirm } = useNotification();
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
+  const [assistencias, setAssistencias] = useState<AssistenciaTecnica[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -137,13 +138,24 @@ export default function FerramentasPage() {
       }
 
       // BUSCAR OBRAS
-      console.log('🔍 Buscando obras no Supabase');
-      const { data: obrasData, error: obrasError } = await supabase
-        .from('obras')
-        .select('*')
-        .in('owner_id', ownerIds)
-        .eq('status', 'ativa')
-        .order('created_at', { ascending: false });
+      console.log('🔍 Buscando obras e assistências no Supabase');
+      const [obrasResult, assistenciasResult] = await Promise.all([
+        supabase
+          .from('obras')
+          .select('*')
+          .in('owner_id', ownerIds)
+          .eq('status', 'ativa')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('assistencias_tecnicas')
+          .select('*')
+          .in('owner_id', ownerIds)
+          .eq('status', 'ativa')
+          .order('created_at', { ascending: false})
+      ]);
+
+      const { data: obrasData, error: obrasError } = obrasResult;
+      const { data: assistenciasData, error: assistenciasError } = assistenciasResult;
 
       if (obrasError) {
         console.error('❌ Erro ao carregar obras:', obrasError);
@@ -160,6 +172,14 @@ export default function FerramentasPage() {
           setObras(filteredObras);
           console.log('✅ FUNCIONÁRIO vê obras filtradas:', filteredObras.length, 'de', allObras.length);
         }
+      }
+
+      if (assistenciasError) {
+        console.error('❌ Erro ao carregar assistências:', assistenciasError);
+      } else {
+        const allAssistencias = assistenciasData || [];
+        console.log('🔧 Assistências retornadas do banco:', allAssistencias.length);
+        setAssistencias(allAssistencias);
       }
 
     } catch (error) {
@@ -494,6 +514,10 @@ export default function FerramentasPage() {
     if (type === 'obra') {
       const obra = obras.find(o => o.id === id);
       return obra ? obra.title : 'Obra desconhecida';
+    }
+    if (type === 'assistencia_tecnica') {
+      const assistencia = assistencias.find(a => a.id === id);
+      return assistencia ? `Assistência: ${assistencia.name}` : 'Assistência desconhecida';
     }
     return 'Localização desconhecida';
   };

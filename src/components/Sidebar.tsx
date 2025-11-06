@@ -10,6 +10,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Hammer,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
@@ -56,6 +57,7 @@ export default function Sidebar({ currentPage, setCurrentPage, isOpen, setIsOpen
     { id: 'obras', label: 'Cadastro de Obra', icon: Building2, show: canManageObras },
     { id: 'usuarios', label: 'Cadastro de Usuário', icon: Users, show: canManageUsers },
     { id: 'ferramentas', label: 'Equipamentos', icon: Wrench, show: canManageFerramentas },
+    { id: 'assistencias', label: 'Assistência Técnica', icon: Hammer, show: canManageFerramentas },
     { id: 'historico', label: 'Histórico', icon: History, show: canViewRelatorios },
     { id: 'parametros', label: 'Parâmetros', icon: Settings, show: isHost },
     { id: 'desaparecidos', label: 'Equipamentos Desaparecidos', icon: AlertTriangle, show: canManageFerramentas },

@@ -33,6 +33,18 @@ export interface Estabelecimento {
   updated_at: string;
 }
 
+export interface AssistenciaTecnica {
+  id: string;
+  name: string;
+  endereco?: string;
+  contato?: string;
+  observacoes?: string;
+  status: 'ativa' | 'inativa';
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Ferramenta {
   id: string;
   name: string;
@@ -40,7 +52,7 @@ export interface Ferramenta {
   modelo: string;
   serial: string;
   status: 'disponivel' | 'em_uso' | 'desaparecida';
-  current_type?: 'obra' | 'estabelecimento';
+  current_type?: 'obra' | 'estabelecimento' | 'assistencia_tecnica';
   current_id?: string;
   cadastrado_por: string;
   owner_id: string;
