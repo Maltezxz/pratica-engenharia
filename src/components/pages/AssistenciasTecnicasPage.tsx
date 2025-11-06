@@ -6,6 +6,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { getFerramentaPermissions } from '../../utils/permissions';
+import { getLinkedHostIds } from '../../utils/linkedHosts';
 import { AssistenciaTecnica, Ferramenta } from '../../types';
 
 interface AssistenciaWithFerramentas extends AssistenciaTecnica {
@@ -45,23 +46,26 @@ export default function AssistenciasTecnicasPage() {
         return;
       }
 
-      // Ferramentas são da EMPRESA (host), não têm "donos"
-      // Todos os usuários do mesmo host veem as mesmas ferramentas
+      // Hosts vinculados compartilham TODOS os recursos (mesma empresa)
       const hostId = user.role === 'host' ? user.id : user.host_id;
-      console.log('🔍 Carregando ferramentas da empresa. Host ID:', hostId, '| Usuário:', user.email, '| Role:', user.role);
+      console.log('🔍 Carregando recursos da empresa. Host ID:', hostId, '| Usuário:', user.email, '| Role:', user.role);
+
+      // Buscar todos os hosts vinculados (mesma empresa)
+      const linkedHostIds = await getLinkedHostIds(hostId);
+      console.log('🔗 Hosts vinculados (mesma empresa):', linkedHostIds);
 
       const [assistenciasRes, ferramentasRes] = await Promise.all([
         supabase
           .from('assistencias_tecnicas')
           .select('*')
-          .eq('owner_id', hostId)
+          .in('owner_id', linkedHostIds)
           .eq('status', 'ativa')
           .order('created_at', { ascending: false }),
 
         supabase
           .from('ferramentas')
           .select('*')
-          .eq('owner_id', hostId)
+          .in('owner_id', linkedHostIds)
           .neq('status', 'desaparecida'),
       ]);
 

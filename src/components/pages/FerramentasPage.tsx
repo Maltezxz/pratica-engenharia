@@ -8,6 +8,7 @@ import { useNotification } from '../../contexts/NotificationContext';
 import { Ferramenta, Obra, AssistenciaTecnica } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
 import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
+import { getLinkedHostIds } from '../../utils/linkedHosts';
 import { FerramentaImage } from '../FerramentaImage';
 
 export default function FerramentasPage() {
@@ -67,7 +68,7 @@ export default function FerramentasPage() {
 
       console.log(`🔄 [TENTATIVA ${retryCount + 1}] Carregando ferramentas para:`, user.name, user.role, user.id);
 
-      // Ferramentas são da EMPRESA (host), cada usuário vê apenas as do seu host
+      // Hosts vinculados compartilham TODOS os recursos (mesma empresa)
       const hostId = user.role === 'host' ? user.id : user.host_id;
 
       if (!hostId) {
@@ -78,13 +79,17 @@ export default function FerramentasPage() {
         return;
       }
 
+      // Buscar todos os hosts vinculados (mesma empresa)
+      const linkedHostIds = await getLinkedHostIds(hostId);
+      console.log('🔗 Hosts vinculados:', linkedHostIds);
+
       // BUSCAR FERRAMENTAS COM TIMEOUT (SEM IMAGENS PARA PERFORMANCE)
-      console.log('🔍 Buscando ferramentas da empresa. Host ID:', hostId);
+      console.log('🔍 Buscando ferramentas da empresa');
 
       const ferramentasPromise = supabase
         .from('ferramentas')
         .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, descricao, nf, data, valor, tempo_garantia_dias, garantia, marca, numero_lacre, numero_placa, adesivo, usuario, obra, created_at, updated_at, tipo')
-        .eq('owner_id', hostId)
+        .in('owner_id', linkedHostIds)
         .order('created_at', { ascending: false });
 
       const timeoutPromise = new Promise((_, reject) =>
@@ -129,13 +134,13 @@ export default function FerramentasPage() {
         supabase
           .from('obras')
           .select('*')
-          .eq('owner_id', hostId)
+          .in('owner_id', linkedHostIds)
           .eq('status', 'ativa')
           .order('created_at', { ascending: false }),
         supabase
           .from('assistencias_tecnicas')
           .select('*')
-          .eq('owner_id', hostId)
+          .in('owner_id', linkedHostIds)
           .eq('status', 'ativa')
           .order('created_at', { ascending: false})
       ]);
