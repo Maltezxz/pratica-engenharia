@@ -296,12 +296,15 @@ export default function AssistenciasTecnicasPage() {
 
       // Se for USUÁRIO: filtrar apenas as permitidas
       console.log('👤 Usuário comum - filtrando permissões...');
-      const permissions = await getFerramentaPermissions(user.id);
-      const allowedIds = new Set(permissions.map(p => p.ferramenta_id));
+      const allowedIds = await getFerramentaPermissions(user.id);
       console.log('🔐 Permissões do usuário:', allowedIds.size, 'ferramentas');
+      console.log('🔐 IDs permitidos:', Array.from(allowedIds));
 
       const allowed = allFerramentas.filter(f => allowedIds.has(f.id));
       console.log('✅ Ferramentas permitidas:', allowed.length);
+      if (allowed.length > 0) {
+        console.log('📋 Lista de ferramentas permitidas:', allowed.map(f => ({ id: f.id, name: f.name })));
+      }
 
       setModalFerramentas(allowed);
 
