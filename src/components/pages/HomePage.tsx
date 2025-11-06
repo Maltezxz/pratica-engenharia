@@ -1,22 +1,28 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Building2, Wrench, AlertTriangle, TrendingUp, Clock, Plus, Edit, CheckCircle, Trash2, MoveRight, MapPin, PackageMinus } from 'lucide-react';
+import { Building2, Wrench, AlertTriangle, TrendingUp, Clock, Plus, Edit, CheckCircle, Trash2, MoveRight, MapPin, X, Calendar } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useRefresh } from '../../contexts/RefreshContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { Obra, Ferramenta } from '../../types';
-import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
+
+interface ObraWithFerramentas extends Obra {
+  ferramentas?: Ferramenta[];
+}
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { refreshTrigger } = useRefresh();
-  const [obras, setObras] = useState<Obra[]>([]);
+  const { refreshTrigger, triggerRefresh } = useRefresh();
+  const { showToast } = useNotification();
+  const [obras, setObras] = useState<ObraWithFerramentas[]>([]);
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
+  const [todasFerramentas, setTodasFerramentas] = useState<Ferramenta[]>([]);
   const [loading, setLoading] = useState(true);
   const [atividadesRecentes, setAtividadesRecentes] = useState<any[]>([]);
-
-  const getEquipmentCountByObra = (obraId: string) => {
-    return ferramentas.filter(f => f.current_id === obraId && f.current_type === 'obra').length;
-  };
+  const [selectedObra, setSelectedObra] = useState<ObraWithFerramentas | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedFerramentaId, setSelectedFerramentaId] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const getActivityIcon = (tipoEvento: string) => {
     switch (tipoEvento) {
@@ -52,11 +58,20 @@ export default function HomePage() {
     return `${day}/${month} - ${hours}:${minutes}`;
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   const loadData = useCallback(async () => {
     try {
       if (!user?.id) {
         setObras([]);
         setFerramentas([]);
+        setTodasFerramentas([]);
         setAtividadesRecentes([]);
         setLoading(false);
         return;
@@ -64,23 +79,19 @@ export default function HomePage() {
 
       console.log('🔄 [HOME] Carregando dados para:', user.name, 'Role:', user.role);
 
-      // BUSCAR APENAS OS CAMPOS NECESSÁRIOS - OTIMIZADO (SEM IMAGENS)
       const [obrasRes, ferramRes, historicoRes] = await Promise.all([
-        // OBRAS ATIVAS - apenas campos necessários para o card (sem image_url para performance)
         supabase
           .from('obras')
-          .select('id, title, endereco, engenheiro, created_at')
+          .select('id, title, endereco, engenheiro, created_at, image_url')
           .eq('status', 'ativa')
           .order('created_at', { ascending: false })
           .limit(5),
 
-        // FERRAMENTAS - apenas campos para contagem
         supabase
           .from('ferramentas')
-          .select('id, current_type, current_id, status')
+          .select('id, name, tipo, modelo, serial, current_type, current_id, status, created_at')
           .neq('status', 'desaparecida'),
 
-        // HISTÓRICO RECENTE - apenas últimas 5 atividades
         supabase
           .from('historico')
           .select('id, tipo_evento, descricao, created_at')
@@ -88,52 +99,51 @@ export default function HomePage() {
           .limit(5)
       ]);
 
-      console.log('📥 Respostas recebidas:', {
-        obras: obrasRes.data?.length || 0,
-        ferramentas: ferramRes.data?.length || 0,
-        historico: historicoRes.data?.length || 0
-      });
-
-      // Processar obras
       if (obrasRes.error) {
         console.error('❌ Erro obras:', obrasRes.error);
         setObras([]);
       } else {
         const allObras = obrasRes.data || [];
-        console.log('📋 Total obras no banco:', allObras.length);
-        setObras(allObras);
-        console.log('✅ Obras carregadas:', allObras.length);
+
+        if (ferramRes.data) {
+          const obrasComFerramentas = allObras.map(obra => ({
+            ...obra,
+            ferramentas: ferramRes.data.filter(
+              f => f.current_id === obra.id && f.current_type === 'obra'
+            )
+          }));
+          setObras(obrasComFerramentas);
+        } else {
+          setObras(allObras);
+        }
       }
 
-      // Processar ferramentas
       if (ferramRes.error) {
         console.error('❌ Erro ferramentas:', ferramRes.error);
         setFerramentas([]);
+        setTodasFerramentas([]);
       } else {
         const allFerramentas = ferramRes.data || [];
-        console.log('🔧 Total ferramentas no banco:', allFerramentas.length);
         setFerramentas(allFerramentas);
-        console.log('✅ Ferramentas carregadas:', allFerramentas.length);
+        setTodasFerramentas(allFerramentas);
       }
 
-      // Processar histórico
       if (historicoRes.error) {
         console.error('❌ Erro histórico:', historicoRes.error);
         setAtividadesRecentes([]);
       } else {
         const allHistorico = historicoRes.data || [];
         setAtividadesRecentes(allHistorico.slice(0, 5));
-        console.log('✅ Histórico carregado:', allHistorico.length);
       }
 
     } catch (error) {
       console.error('❌ [HOME] Erro geral:', error);
       setObras([]);
       setFerramentas([]);
+      setTodasFerramentas([]);
       setAtividadesRecentes([]);
     } finally {
       setLoading(false);
-      console.log('✅ [HOME] Carregamento finalizado');
     }
   }, [user]);
 
@@ -153,16 +163,76 @@ export default function HomePage() {
       setTotalDesaparecidos(count || 0);
     };
     fetchDesaparecidos();
-  }, []);
+  }, [refreshTrigger]);
 
-  console.log('📊 RENDER HomePage - Stats:', {
-    obras: obras.length,
-    ferramentas_total: ferramentas.length,
-    equipamentos: totalEquipamentos,
-    desaparecidos: totalDesaparecidos,
-    user: user?.name,
-    role: user?.role
-  });
+  const handleObraClick = (obra: ObraWithFerramentas) => {
+    setSelectedObra(obra);
+    setShowAddModal(true);
+    setSelectedFerramentaId('');
+  };
+
+  const handleAddFerramenta = async () => {
+    if (!selectedFerramentaId || !selectedObra) return;
+
+    setSaving(true);
+    try {
+      const { error: updateError } = await supabase
+        .from('ferramentas')
+        .update({
+          current_type: 'obra',
+          current_id: selectedObra.id,
+          status: 'em_uso',
+        })
+        .eq('id', selectedFerramentaId);
+
+      if (updateError) throw updateError;
+
+      const { data: movData, error: movError } = await supabase
+        .from('movimentacoes')
+        .insert({
+          ferramenta_id: selectedFerramentaId,
+          to_type: 'obra',
+          to_id: selectedObra.id,
+          user_id: user?.id,
+          note: `Adicionado à obra ${selectedObra.title} via Home`,
+        })
+        .select()
+        .single();
+
+      if (movError) throw movError;
+
+      const ferramenta = todasFerramentas.find(f => f.id === selectedFerramentaId);
+      await supabase.from('historico').insert({
+        tipo_evento: 'movimentacao',
+        descricao: `Equipamento "${ferramenta?.name}" adicionado à ${selectedObra.title}`,
+        movimentacao_id: movData?.id,
+        user_id: user?.id,
+        owner_id: user?.id,
+        metadata: {
+          ferramenta_nome: ferramenta?.name,
+          destino: selectedObra.title,
+          origem: 'Home'
+        }
+      });
+
+      showToast('success', `Equipamento adicionado à ${selectedObra.title}!`);
+      setShowAddModal(false);
+      setSelectedObra(null);
+      setSelectedFerramentaId('');
+      await loadData();
+      triggerRefresh();
+    } catch (error: unknown) {
+      console.error('Error adding ferramenta:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao adicionar equipamento';
+      showToast('error', errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const ferramentasDisponiveis = todasFerramentas.filter(
+    f => !f.current_id || f.status === 'disponivel'
+  );
 
   const stats = [
     {
@@ -211,19 +281,6 @@ export default function HomePage() {
               <div className="space-y-2">
                 <div className="h-8 w-16 bg-white/10 rounded animate-pulse"></div>
                 <div className="h-4 w-24 bg-white/5 rounded animate-pulse"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {[1, 2].map((i) => (
-            <div key={i} className="relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6">
-              <div className="h-6 w-32 bg-white/10 rounded animate-pulse mb-6"></div>
-              <div className="space-y-3">
-                {[1, 2, 3].map((j) => (
-                  <div key={j} className="h-24 bg-white/5 rounded-xl animate-pulse"></div>
-                ))}
               </div>
             </div>
           ))}
@@ -279,31 +336,78 @@ export default function HomePage() {
               <h2 className="text-xl font-semibold text-white">Obras Ativas</h2>
               <Building2 className="w-5 h-5 text-gray-400" />
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar">
               {obras.length === 0 ? (
                 <p className="text-gray-400 text-sm py-8 text-center">
                   Nenhuma obra ativa
                 </p>
               ) : (
                 obras.slice(0, 5).map((obra) => {
-                  const equipmentCount = getEquipmentCountByObra(obra.id);
+                  const equipmentCount = obra.ferramentas?.length || 0;
                   return (
                     <div
                       key={obra.id}
-                      className="relative p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200 group"
+                      onClick={() => handleObraClick(obra)}
+                      className="relative p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-red-500/30 transition-all duration-200 group cursor-pointer"
                     >
-                      <h3 className="text-white font-medium mb-1 group-hover:text-red-400 transition-colors">
-                        {obra.title}
-                      </h3>
-                      <p className="text-gray-400 text-sm">{obra.endereco}</p>
-                      {obra.engenheiro && (
-                        <p className="text-gray-500 text-xs mt-1">
-                          Eng: {obra.engenheiro}
-                        </p>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="text-white font-medium mb-1 group-hover:text-red-400 transition-colors">
+                            {obra.title}
+                          </h3>
+                          <p className="text-gray-400 text-sm">{obra.endereco}</p>
+                          {obra.engenheiro && (
+                            <p className="text-gray-500 text-xs mt-1">
+                              Eng: {obra.engenheiro}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-black/50 backdrop-blur-sm">
+                          <Wrench className="w-3.5 h-3.5 text-white" />
+                          <span className="text-xs font-bold text-white">{equipmentCount}</span>
+                        </div>
+                      </div>
+
+                      {obra.ferramentas && obra.ferramentas.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                          {obra.ferramentas.slice(0, 3).map((ferramenta) => (
+                            <div
+                              key={ferramenta.id}
+                              className="flex items-center space-x-3 p-2 rounded-lg bg-black/30 hover:bg-black/40 transition-colors"
+                            >
+                              <div className="p-1.5 rounded-lg bg-gradient-to-br from-purple-600 to-purple-500">
+                                <Wrench className="w-3 h-3 text-white" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white text-xs font-medium truncate">
+                                  {ferramenta.name}
+                                </p>
+                                <div className="flex items-center space-x-2 mt-0.5">
+                                  {ferramenta.modelo && (
+                                    <span className="text-gray-400 text-xs truncate">
+                                      {ferramenta.modelo}
+                                    </span>
+                                  )}
+                                  {ferramenta.created_at && (
+                                    <span className="text-gray-500 text-xs flex items-center space-x-1">
+                                      <Calendar className="w-2.5 h-2.5" />
+                                      <span>{formatDate(ferramenta.created_at)}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {obra.ferramentas.length > 3 && (
+                            <p className="text-gray-500 text-xs text-center pt-1">
+                              +{obra.ferramentas.length - 3} equipamento(s)
+                            </p>
+                          )}
+                        </div>
                       )}
-                      <div className="absolute bottom-3 right-3 flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm">
-                        <Wrench className="w-3.5 h-3.5 text-white" />
-                        <span className="text-xs font-bold text-white">{equipmentCount}</span>
+
+                      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Plus className="w-5 h-5 text-red-400" />
                       </div>
                     </div>
                   );
@@ -320,7 +424,7 @@ export default function HomePage() {
               <h2 className="text-xl font-semibold text-white">Atividades Recentes</h2>
               <Clock className="w-5 h-5 text-gray-400" />
             </div>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+            <div className="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar">
               {atividadesRecentes.length === 0 ? (
                 <p className="text-gray-400 text-sm py-8 text-center">
                   Nenhuma atividade recente
@@ -359,8 +463,83 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-
       </div>
+
+      {showAddModal && selectedObra && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md animate-scale-in">
+            <div className="relative backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 shadow-2xl overflow-hidden">
+              <div className="p-6 border-b border-white/10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">Adicionar Equipamento</h2>
+                    <p className="text-gray-400 text-sm mt-1">{selectedObra.title}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setSelectedObra(null);
+                      setSelectedFerramentaId('');
+                    }}
+                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-200"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-200">
+                    Selecione o Equipamento
+                  </label>
+                  {ferramentasDisponiveis.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                      <p className="text-sm text-yellow-400">
+                        Nenhum equipamento disponível. Todos estão alocados ou cadastre novos na aba Equipamentos.
+                      </p>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedFerramentaId}
+                      onChange={(e) => setSelectedFerramentaId(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
+                    >
+                      <option value="" className="bg-gray-900">Selecione...</option>
+                      {ferramentasDisponiveis.map((ferramenta) => (
+                        <option key={ferramenta.id} value={ferramenta.id} className="bg-gray-900">
+                          {ferramenta.name} {ferramenta.modelo ? `- ${ferramenta.modelo}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setSelectedObra(null);
+                      setSelectedFerramentaId('');
+                    }}
+                    className="flex-1 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAddFerramenta}
+                    disabled={!selectedFerramentaId || saving}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                  >
+                    {saving ? 'Adicionando...' : 'Adicionar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
