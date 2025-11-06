@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Settings, User, Mail, Building2, Shield, Users, ChevronRight, X, Save, Wrench } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useNotification } from '../../contexts/NotificationContext';
 import { supabase } from '../../lib/supabase';
 import { Obra } from '../../types';
 
@@ -37,6 +38,7 @@ interface Ferramenta {
 
 export default function ParametrosPage() {
   const { user } = useAuth();
+  const { showToast } = useNotification();
   const [users, setUsers] = useState<UserWithPermissions[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
@@ -230,13 +232,13 @@ export default function ParametrosPage() {
       }
 
       console.log('✓ Permissões salvas com sucesso');
-      alert(`Permissões atualizadas com sucesso!\n${obraResult.data.permissions_count} obra(s) e ${ferramentaResult.data.permissions_count} ferramenta(s) permitidas.`);
+      showToast('success', `Permissões atualizadas com sucesso! ${obraResult.data.permissions_count} obra(s) e ${ferramentaResult.data.permissions_count} ferramenta(s) permitidas.`);
       await loadData();
       setSelectedUser(null);
     } catch (error: unknown) {
       console.error('ERRO ao salvar permissões:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar permissões';
-      alert(`Erro: ${errorMessage}`);
+      showToast('error', `Erro: ${errorMessage}`);
     } finally {
       setSaving(false);
     }

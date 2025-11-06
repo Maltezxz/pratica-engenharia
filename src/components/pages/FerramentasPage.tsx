@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useRefresh } from '../../contexts/RefreshContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { Ferramenta, Obra } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
 import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
@@ -13,6 +14,7 @@ export default function FerramentasPage() {
   const { user } = useAuth();
   const { isHost, canCreateFerramentas, canDeleteFerramentas, canTransferFerramentas, canMarkDesaparecida } = usePermissions();
   const { triggerRefresh } = useRefresh();
+  const { showToast, showConfirm } = useNotification();
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,7 +120,7 @@ export default function FerramentasPage() {
         }
 
         console.error('❌ Falha após todas as tentativas');
-        alert('Erro ao carregar equipamentos. Verifique sua conexão e tente novamente.');
+        showToast('error', 'Erro ao carregar equipamentos. Verifique sua conexão e tente novamente.');
       } else {
         const allFerramentas = ferramentasData || [];
         console.log('📦 Ferramentas retornadas do banco:', allFerramentas.length);
@@ -170,7 +172,7 @@ export default function FerramentasPage() {
         return;
       }
 
-      alert('Erro ao conectar com o servidor. Verifique sua internet e recarregue a página.');
+      showToast('error', 'Erro ao conectar com o servidor. Verifique sua internet e recarregue a página.');
     } finally {
       setLoading(false);
     }
@@ -261,7 +263,7 @@ export default function FerramentasPage() {
           }
 
           console.log('✅ Ferramenta atualizada no Supabase');
-          alert('Equipamento atualizado com sucesso!');
+          showToast('success', 'Equipamento atualizado com sucesso!');
         } else {
           // Criar nova ferramenta
           const { data: newFerramenta, error: ferramError } = await supabase
@@ -300,7 +302,7 @@ export default function FerramentasPage() {
           }
 
           console.log('✅ Ferramenta criada no Supabase');
-          alert('Equipamento criado com sucesso!');
+          showToast('success', 'Equipamento criado com sucesso!');
         }
       } catch (error) {
         console.error('Erro ao salvar ferramenta:', error);
@@ -338,7 +340,7 @@ export default function FerramentasPage() {
     } catch (error: unknown) {
       console.error('Error saving ferramenta:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar ferramenta';
-      alert(errorMessage);
+      showToast('error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -389,7 +391,7 @@ export default function FerramentasPage() {
         }
       });
 
-      alert(`Equipamento movido para ${obraDestino?.title || 'obra'} com sucesso!`);
+      showToast('success', `Equipamento movido para ${obraDestino?.title || 'obra'} com sucesso!`);
 
       setShowMoveModal(false);
       setSelectedFerramenta(null);
@@ -399,15 +401,23 @@ export default function FerramentasPage() {
     } catch (error: unknown) {
       console.error('Error moving ferramenta:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao mover equipamento';
-      alert(errorMessage);
+      showToast('error', errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este equipamento?')) return;
+  const handleDelete = (id: string) => {
+    showConfirm({
+      title: 'Excluir Equipamento',
+      message: 'Tem certeza que deseja excluir este equipamento?',
+      confirmText: 'Excluir',
+      type: 'danger',
+      onConfirm: () => executeDelete(id),
+    });
+  };
 
+  const executeDelete = async (id: string) => {
     try {
       const { error } = await supabase
         .from('ferramentas')
@@ -415,10 +425,11 @@ export default function FerramentasPage() {
         .eq('id', id);
 
       if (error) throw error;
+      showToast('success', 'Equipamento excluído com sucesso!');
       await loadData();
     } catch (error) {
       console.error('Error deleting ferramenta:', error);
-      alert('Erro ao excluir equipamento');
+      showToast('error', 'Erro ao excluir equipamento');
     }
   };
 
@@ -468,11 +479,11 @@ export default function FerramentasPage() {
 
       triggerRefresh();
 
-      alert(`Equipamento marcado como ${newStatus === 'desaparecida' ? 'desaparecido' : 'encontrado'}!`);
+      showToast('success', `Equipamento marcado como ${newStatus === 'desaparecida' ? 'desaparecido' : 'encontrado'}!`);
     } catch (error) {
       console.error('❌ Erro ao atualizar status:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      alert(`Erro ao atualizar status: ${errorMessage}`);
+      showToast('error', `Erro ao atualizar status: ${errorMessage}`);
     }
   };
 

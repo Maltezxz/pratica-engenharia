@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Plus, Users, Trash2, Mail, Crown, User as UserIcon, Shield } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useNotification } from '../../contexts/NotificationContext';
 import { User } from '../../types';
 
 export default function UsuariosPage() {
   const { user, addEmployee, removeEmployee, getEmployees, isProtectedUser } = useAuth();
+  const { showToast, showConfirm } = useNotification();
   const [funcionarios, setFuncionarios] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -95,7 +97,7 @@ export default function UsuariosPage() {
       await loadFuncionarios();
 
       const accountTypeLabel = formData.accountType === 'host' ? 'Host' : 'Funcionário';
-      alert(`${accountTypeLabel} ${newEmployee.name} criado com sucesso!\n\nCredenciais de login:\nUsuário: ${newEmployee.name}\nSenha: ${formData.password}`);
+      showToast('success', `${accountTypeLabel} ${newEmployee.name} criado com sucesso!`);
     } catch (error: unknown) {
       console.error('❌ [UsuariosPage] Erro ao criar usuário:', error);
       if (error instanceof Error) {
@@ -103,15 +105,23 @@ export default function UsuariosPage() {
         console.error('❌ [UsuariosPage] Stack:', error.stack);
       }
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      alert('Erro ao criar usuário: ' + errorMessage);
+      showToast('error', 'Erro ao criar usuário: ' + errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (userId: string) => {
-    if (!confirm('Tem certeza que deseja excluir este funcionário? Esta ação não pode ser desfeita.')) return;
+  const handleDelete = (userId: string) => {
+    showConfirm({
+      title: 'Excluir Usuário',
+      message: 'Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.',
+      confirmText: 'Excluir',
+      type: 'danger',
+      onConfirm: () => executeDelete(userId),
+    });
+  };
 
+  const executeDelete = async (userId: string) => {
     try {
       if (!removeEmployee) {
         throw new Error('Função de remover funcionário não disponível');
@@ -123,11 +133,11 @@ export default function UsuariosPage() {
 
       removeEmployee(userId);
       await loadFuncionarios();
-      alert('Funcionário excluído com sucesso!');
+      showToast('success', 'Usuário excluído com sucesso!');
     } catch (error: unknown) {
       console.error('Error deleting user:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      alert('Erro ao excluir funcionário: ' + errorMessage);
+      showToast('error', 'Erro ao excluir usuário: ' + errorMessage);
     }
   };
 

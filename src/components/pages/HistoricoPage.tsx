@@ -3,6 +3,7 @@ import { History, Building2, Wrench, MapPin, Calendar, Filter, Search, Download,
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useRefresh } from '../../contexts/RefreshContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { Obra, Ferramenta, Movimentacao } from '../../types';
 
 interface HistoricoObra extends Obra {
@@ -41,6 +42,7 @@ interface HistoricoEntry {
 export default function HistoricoPage() {
   const { user } = useAuth();
   const { refreshTrigger } = useRefresh();
+  const { showToast } = useNotification();
   const [obras, setObras] = useState<HistoricoObra[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<HistoricoMovimentacao[]>([]);
   const [historico, setHistorico] = useState<HistoricoEntry[]>([]);
@@ -259,7 +261,7 @@ export default function HistoricoPage() {
   const exportToCSV = () => {
     if (activeTab === 'obras') {
       if (filteredObras.length === 0) {
-        alert('Não há dados para exportar com os filtros aplicados.');
+        showToast('warning', 'Não há dados para exportar com os filtros aplicados.');
         return;
       }
 
@@ -286,7 +288,7 @@ export default function HistoricoPage() {
       link.click();
     } else {
       if (filteredMovimentacoes.length === 0) {
-        alert('Não há dados para exportar com os filtros aplicados.');
+        showToast('warning', 'Não há dados para exportar com os filtros aplicados.');
         return;
       }
 

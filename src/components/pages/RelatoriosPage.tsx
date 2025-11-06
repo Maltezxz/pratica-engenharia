@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { FileText, Download, Calendar, Wrench, User, MapPin } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useNotification } from '../../contexts/NotificationContext';
 import { Movimentacao, Ferramenta, User as UserType, Obra, Estabelecimento } from '../../types';
 
 interface MovimentacaoWithDetails extends Movimentacao {
@@ -11,6 +12,7 @@ interface MovimentacaoWithDetails extends Movimentacao {
 
 export default function RelatoriosPage() {
   const { user } = useAuth();
+  const { showToast } = useNotification();
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoWithDetails[]>([]);
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
   const [usuarios, setUsuarios] = useState<UserType[]>([]);
@@ -110,7 +112,7 @@ export default function RelatoriosPage() {
 
   const exportToCSV = () => {
     if (filteredMovimentacoes.length === 0) {
-      alert('Não há dados para exportar com os filtros aplicados.');
+      showToast('warning', 'Não há dados para exportar com os filtros aplicados.');
       return;
     }
 
@@ -140,7 +142,7 @@ export default function RelatoriosPage() {
       setTimeout(() => URL.revokeObjectURL(link.href), 100);
     } catch (error) {
       console.error('Error exporting CSV:', error);
-      alert('Erro ao exportar arquivo CSV');
+      showToast('error', 'Erro ao exportar arquivo CSV');
     }
   };
 

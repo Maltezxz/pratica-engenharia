@@ -3,6 +3,7 @@ import { Plus, Building2, Trash2, CheckCircle, XCircle, Calendar, Edit } from 'l
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useRefresh } from '../../contexts/RefreshContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { Obra } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
 import { getFilteredObras } from '../../utils/permissions';
@@ -10,6 +11,7 @@ import { getFilteredObras } from '../../utils/permissions';
 export default function ObrasPage() {
   const { user } = useAuth();
   const { triggerRefresh } = useRefresh();
+  const { showToast, showConfirm } = useNotification();
   const [obras, setObras] = useState<Obra[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -161,7 +163,7 @@ export default function ObrasPage() {
           }
         });
 
-        alert('Obra atualizada com sucesso!');
+        showToast('success', 'Obra atualizada com sucesso!');
       } else {
         // Criar nova obra
         const newObraData = {
@@ -197,7 +199,7 @@ export default function ObrasPage() {
           }
         });
 
-        alert('Obra criada com sucesso!');
+        showToast('success', 'Obra criada com sucesso!');
       }
 
       setShowModal(false);
@@ -218,7 +220,7 @@ export default function ObrasPage() {
     } catch (error: unknown) {
       console.error('Error saving obra:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar obra';
-      alert(errorMessage);
+      showToast('error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -228,10 +230,20 @@ export default function ObrasPage() {
     const newStatus = currentStatus === 'ativa' ? 'finalizada' : 'ativa';
 
     if (newStatus === 'finalizada') {
-      if (!confirm('Tem certeza que deseja finalizar esta obra? Esta ação não pode ser desfeita.')) {
-        return;
-      }
+      showConfirm({
+        title: 'Finalizar Obra',
+        message: 'Tem certeza que deseja finalizar esta obra? Esta ação não pode ser desfeita.',
+        confirmText: 'Finalizar',
+        type: 'warning',
+        onConfirm: () => executeToggleStatus(obraId, newStatus),
+      });
+      return;
     }
+
+    await executeToggleStatus(obraId, newStatus);
+  };
+
+  const executeToggleStatus = async (obraId: string, newStatus: 'ativa' | 'finalizada') => {
 
     try {
       const updateData = {
@@ -266,19 +278,28 @@ export default function ObrasPage() {
         });
       }
 
-      alert(`Obra ${newStatus === 'ativa' ? 'reativada' : 'finalizada'} com sucesso!`);
+      showToast('success', `Obra ${newStatus === 'ativa' ? 'reativada' : 'finalizada'} com sucesso!`);
 
       await loadObras();
-      triggerRefresh(); // Dispara atualização global
+      triggerRefresh();
     } catch (error: unknown) {
       console.error('Error updating obra:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao atualizar obra';
-      alert(errorMessage);
+      showToast('error', errorMessage);
     }
   };
 
-  const handleDelete = async (obraId: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta obra? Todos os dados relacionados serão perdidos.')) return;
+  const handleDelete = (obraId: string) => {
+    showConfirm({
+      title: 'Excluir Obra',
+      message: 'Tem certeza que deseja excluir esta obra? Todos os dados relacionados serão perdidos.',
+      confirmText: 'Excluir',
+      type: 'danger',
+      onConfirm: () => executeDelete(obraId),
+    });
+  };
+
+  const executeDelete = async (obraId: string) => {
 
     try {
       const { error } = await supabase
@@ -292,14 +313,14 @@ export default function ObrasPage() {
       }
 
       console.log('✅ Obra excluída do Supabase');
-      alert('Obra excluída com sucesso!');
+      showToast('success', 'Obra excluída com sucesso!');
 
       await loadObras();
-      triggerRefresh(); // Dispara atualização global
+      triggerRefresh();
     } catch (error: unknown) {
       console.error('Error deleting obra:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao excluir obra';
-      alert(errorMessage);
+      showToast('error', errorMessage);
     }
   };
 
