@@ -7,6 +7,7 @@ import { useNotification } from '../../contexts/NotificationContext';
 import { Obra } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
 import { getFilteredObras } from '../../utils/permissions';
+import { getLinkedHostIds } from '../../utils/linkedHosts';
 
 export default function ObrasPage() {
   const { user } = useAuth();
@@ -35,22 +36,22 @@ export default function ObrasPage() {
         return;
       }
 
-
-      // Obras são da EMPRESA (host), cada usuário vê apenas as do seu host
       const hostId = user.role === 'host' ? user.id : user.host_id;
 
       if (!hostId) {
-        console.warn('⚠️ Nenhum host_id encontrado');
         setObras([]);
         setLoading(false);
         return;
       }
 
+      // Buscar todos os hosts vinculados
+      const linkedHostIds = await getLinkedHostIds(hostId);
 
+      // Buscar obras de TODOS os hosts vinculados
       const { data, error } = await supabase
         .from('obras')
         .select('id, title, description, endereco, start_date, engenheiro, status, owner_id, created_at, updated_at')
-        .eq('owner_id', hostId)
+        .in('owner_id', linkedHostIds)
         .order('created_at', { ascending: false });
 
       if (error) {
