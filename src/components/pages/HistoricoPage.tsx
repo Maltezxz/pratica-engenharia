@@ -118,7 +118,7 @@ export default function HistoricoPage() {
             ferramentas:ferramentas(count),
             movimentacoes:movimentacoes(count)
           `)
-          .eq('owner_id', ownerId)
+          .in('owner_id', ownerIds)
           .order('created_at', { ascending: false });
 
         if (obrasError) {
