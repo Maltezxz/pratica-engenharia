@@ -21,6 +21,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [atividadesRecentes, setAtividadesRecentes] = useState<any[]>([]);
   const [selectedObra, setSelectedObra] = useState<ObraWithFerramentas | null>(null);
+  const [showObraModal, setShowObraModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedFerramentaId, setSelectedFerramentaId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -185,7 +186,7 @@ export default function HomePage() {
 
   const handleObraClick = (obra: ObraWithFerramentas) => {
     setSelectedObra(obra);
-    setShowAddModal(true);
+    setShowObraModal(true);
     setSelectedFerramentaId('');
   };
 
@@ -235,10 +236,10 @@ export default function HomePage() {
 
       showToast('success', `Equipamento adicionado à ${selectedObra.title}!`);
       setShowAddModal(false);
-      setSelectedObra(null);
       setSelectedFerramentaId('');
       await loadData();
       triggerRefresh();
+      setShowObraModal(true);
     } catch (error: unknown) {
       console.error('Error adding ferramenta:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao adicionar equipamento';
@@ -487,6 +488,113 @@ export default function HomePage() {
         </div>
       </div>
 
+      {showObraModal && selectedObra && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-2xl animate-scale-in">
+            <div className="relative backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+              <div className="p-6 border-b border-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h2 className="text-xl font-semibold text-white">{selectedObra.title}</h2>
+                    <p className="text-gray-400 text-sm mt-1">{selectedObra.endereco}</p>
+                    {selectedObra.engenheiro && (
+                      <p className="text-gray-500 text-xs mt-1">Engenheiro: {selectedObra.engenheiro}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowObraModal(false);
+                      setSelectedObra(null);
+                    }}
+                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-200"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-white">
+                    Equipamentos ({selectedObra.ferramentas?.length || 0})
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowObraModal(false);
+                      setShowAddModal(true);
+                    }}
+                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all duration-200"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="text-sm font-medium">Adicionar</span>
+                  </button>
+                </div>
+
+                {!selectedObra.ferramentas || selectedObra.ferramentas.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Wrench className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-400 text-sm">Nenhum equipamento cadastrado nesta obra</p>
+                    <button
+                      onClick={() => {
+                        setShowObraModal(false);
+                        setShowAddModal(true);
+                      }}
+                      className="mt-4 px-4 py-2 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 hover:border-red-500/30 transition-all duration-200"
+                    >
+                      Adicionar primeiro equipamento
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedObra.ferramentas.map((ferramenta) => (
+                      <div
+                        key={ferramenta.id}
+                        className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200"
+                      >
+                        <div className="flex items-start space-x-3">
+                          <div className="p-2 rounded-lg bg-gradient-to-br from-orange-600 to-orange-500">
+                            <Wrench className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-white font-medium">{ferramenta.name}</h4>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {ferramenta.modelo && (
+                                <span className="px-2 py-1 text-xs rounded-lg bg-white/5 text-gray-400">
+                                  {ferramenta.modelo}
+                                </span>
+                              )}
+                              {ferramenta.serial && (
+                                <span className="px-2 py-1 text-xs rounded-lg bg-white/5 text-gray-400">
+                                  S/N: {ferramenta.serial}
+                                </span>
+                              )}
+                              {ferramenta.tipo && (
+                                <span className="px-2 py-1 text-xs rounded-lg bg-blue-500/10 text-blue-400">
+                                  {ferramenta.tipo}
+                                </span>
+                              )}
+                              <span className={`px-2 py-1 text-xs rounded-lg ${
+                                ferramenta.status === 'em_uso' ? 'bg-green-500/10 text-green-400' :
+                                ferramenta.status === 'disponivel' ? 'bg-gray-500/10 text-gray-400' :
+                                'bg-red-500/10 text-red-400'
+                              }`}>
+                                {ferramenta.status === 'em_uso' ? 'Em uso' :
+                                 ferramenta.status === 'disponivel' ? 'Disponível' :
+                                 ferramenta.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddModal && selectedObra && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="relative w-full max-w-md animate-scale-in">
@@ -500,7 +608,7 @@ export default function HomePage() {
                   <button
                     onClick={() => {
                       setShowAddModal(false);
-                      setSelectedObra(null);
+                      setShowObraModal(true);
                       setSelectedFerramentaId('');
                     }}
                     className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-200"
@@ -556,12 +664,12 @@ export default function HomePage() {
                     type="button"
                     onClick={() => {
                       setShowAddModal(false);
-                      setSelectedObra(null);
+                      setShowObraModal(true);
                       setSelectedFerramentaId('');
                     }}
                     className="flex-1 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium"
                   >
-                    Cancelar
+                    Voltar
                   </button>
                   <button
                     onClick={handleAddFerramenta}
