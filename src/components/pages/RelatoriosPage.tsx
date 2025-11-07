@@ -56,7 +56,11 @@ export default function RelatoriosPage() {
       const [movRes, ferramRes, usersRes, obrasRes, estabRes] = await Promise.all([
         supabase
           .from('movimentacoes')
-          .select('*')
+          .select(`
+            *,
+            ferramenta:ferramentas(id, name, modelo, serial, tipo),
+            user:users(id, name, email)
+          `)
           .order('created_at', { ascending: false })
           .limit(100),
         supabase.from('ferramentas').select('*').in('owner_id', hostIds),
@@ -66,12 +70,7 @@ export default function RelatoriosPage() {
       ]);
 
       if (movRes.data) {
-        const movWithDetails = movRes.data.map(mov => {
-          const ferramenta = ferramRes.data?.find(f => f.id === mov.ferramenta_id);
-          const usuario = usersRes.data?.find(u => u.id === mov.user_id);
-          return { ...mov, ferramenta, user: usuario };
-        });
-        setMovimentacoes(movWithDetails);
+        setMovimentacoes(movRes.data as MovimentacaoWithDetails[]);
       }
 
       if (ferramRes.data) setFerramentas(ferramRes.data);
