@@ -58,13 +58,13 @@ export default function UsuariosPage() {
     setLoading(true);
 
     try {
-      console.log('🔍 [UsuariosPage] Iniciando criação de usuário...');
-      console.log('🔍 [UsuariosPage] Dados do formulário:', {
+      showToast('info', 'Adicionando funcionário...');
+
+      const newUserData = {
         name: formData.name,
         email: formData.email,
-        hasPassword: !!formData.password
-      });
-      console.log('🔍 [UsuariosPage] Usuário logado:', user);
+        role: formData.isHost ? 'host' : 'funcionario'
+      };
 
       if (!addEmployee) {
         throw new Error('Função de adicionar funcionário não disponível');
@@ -82,7 +82,6 @@ export default function UsuariosPage() {
         throw new Error('Senha é obrigatória');
       }
 
-      console.log('🔍 [UsuariosPage] Chamando addEmployee...');
 
       const newEmployee = await addEmployee({
         name: formData.name.trim(),
@@ -90,7 +89,6 @@ export default function UsuariosPage() {
         role: formData.accountType,
       }, formData.password.trim());
 
-      console.log('✅ [UsuariosPage] Funcionário criado:', newEmployee);
 
       setShowModal(false);
       setFormData({ name: '', email: '', password: '', accountType: 'funcionario' });

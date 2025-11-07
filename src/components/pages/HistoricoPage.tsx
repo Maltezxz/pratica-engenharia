@@ -79,7 +79,6 @@ export default function HistoricoPage() {
         ownerIds = hosts?.map(h => h.id) || [];
       }
 
-      console.log('📊 Owner IDs (todos os hosts):', ownerIds);
 
       if (ownerIds.length === 0) {
         setObras([]);
@@ -105,10 +104,8 @@ export default function HistoricoPage() {
           console.warn('Erro ao carregar histórico do Supabase:', historicoError);
         } else {
           setHistorico(historicoData || []);
-          console.log('✅ Histórico carregado do Supabase');
         }
       } catch (error) {
-        console.log('Erro ao carregar histórico:', error);
         setHistorico([]);
       }
 
@@ -130,9 +127,7 @@ export default function HistoricoPage() {
         }
 
         setObras(obrasData || []);
-        console.log('✅ Obras carregadas do Supabase');
       } catch {
-        console.log('🔄 Carregando obras do localStorage');
         // Fallback para dados locais se necessário
         setObras([]);
       }
@@ -154,12 +149,8 @@ export default function HistoricoPage() {
           throw movError;
         }
 
-        console.log('📦 Movimentações carregadas:', movData?.length || 0);
-        console.log('🔍 Dados das movimentações:', movData);
         setMovimentacoes(movData || []);
-        console.log('✅ Movimentações carregadas do Supabase');
       } catch {
-        console.log('🔄 Carregando movimentações do localStorage');
         setMovimentacoes([]);
       }
     } catch (error) {
@@ -189,7 +180,6 @@ export default function HistoricoPage() {
           filter: `owner_id=eq.${ownerId}`,
         },
         (payload) => {
-          console.log('Histórico atualizado em tempo real:', payload);
           loadData();
         }
       )
@@ -206,7 +196,6 @@ export default function HistoricoPage() {
           filter: `owner_id=eq.${ownerId}`,
         },
         (payload) => {
-          console.log('Obras atualizadas em tempo real:', payload);
           loadData();
         }
       )
@@ -222,7 +211,6 @@ export default function HistoricoPage() {
           table: 'movimentacoes',
         },
         (payload) => {
-          console.log('Movimentações atualizadas em tempo real:', payload);
           loadData();
         }
       )

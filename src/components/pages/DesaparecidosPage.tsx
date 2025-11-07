@@ -30,7 +30,6 @@ export default function DesaparecidosPage() {
         ownerIds = hosts?.map(h => h.id) || [];
       }
 
-      console.log('📊 Owner IDs (todos os hosts):', ownerIds);
 
       if (ownerIds.length === 0) {
         setFerramentas([]);

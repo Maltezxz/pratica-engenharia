@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 interface RefreshContextType {
   refreshTrigger: number;
@@ -14,8 +14,10 @@ export function RefreshProvider({ children }: { children: React.ReactNode }) {
     setRefreshTrigger(prev => prev + 1);
   }, []);
 
+  const value = useMemo(() => ({ refreshTrigger, triggerRefresh }), [refreshTrigger, triggerRefresh]);
+
   return (
-    <RefreshContext.Provider value={{ refreshTrigger, triggerRefresh }}>
+    <RefreshContext.Provider value={value}>
       {children}
     </RefreshContext.Provider>
   );

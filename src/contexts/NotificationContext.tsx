@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
 import Toast, { ToastType } from '../components/Toast';
 import ConfirmModal from '../components/ConfirmModal';
 
@@ -56,8 +56,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [confirmOptions]);
 
+  const value = useMemo(() => ({ showToast, showConfirm }), [showToast, showConfirm]);
+
   return (
-    <NotificationContext.Provider value={{ showToast, showConfirm }}>
+    <NotificationContext.Provider value={value}>
       {children}
 
       <div className="fixed top-4 right-4 z-[90] flex flex-col gap-3">

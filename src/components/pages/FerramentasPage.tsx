@@ -59,14 +59,12 @@ export default function FerramentasPage() {
     const MAX_RETRIES = 3;
     try {
       if (!user?.id) {
-        console.log('⚠️ Usuário não identificado, limpando dados');
         setFerramentas([]);
         setObras([]);
         setLoading(false);
         return;
       }
 
-      console.log(`🔄 [TENTATIVA ${retryCount + 1}] Carregando ferramentas para:`, user.name, user.role, user.id);
 
       // Hosts vinculados compartilham TODOS os recursos (mesma empresa)
       const hostId = user.role === 'host' ? user.id : user.host_id;
@@ -81,10 +79,8 @@ export default function FerramentasPage() {
 
       // Buscar todos os hosts vinculados (mesma empresa)
       const linkedHostIds = await getLinkedHostIds(hostId);
-      console.log('🔗 Hosts vinculados:', linkedHostIds);
 
       // BUSCAR FERRAMENTAS COM TIMEOUT (SEM IMAGENS PARA PERFORMANCE)
-      console.log('🔍 Buscando ferramentas da empresa');
 
       const ferramentasPromise = supabase
         .from('ferramentas')
@@ -106,7 +102,6 @@ export default function FerramentasPage() {
 
         // RETRY automático se não for a última tentativa
         if (retryCount < MAX_RETRIES) {
-          console.log(`🔄 Tentando novamente em 2 segundos... (${retryCount + 1}/${MAX_RETRIES})`);
           setTimeout(() => loadData(retryCount + 1), 2000);
           return;
         }
@@ -115,21 +110,17 @@ export default function FerramentasPage() {
         showToast('error', 'Erro ao carregar equipamentos. Verifique sua conexão e tente novamente.');
       } else {
         const allFerramentas = ferramentasData || [];
-        console.log('📦 Ferramentas retornadas do banco:', allFerramentas.length);
 
         // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
         if (user.role === 'host') {
           setFerramentas(allFerramentas);
-          console.log('✅ HOST vê todas as ferramentas:', allFerramentas.length);
         } else {
           const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
           setFerramentas(filteredFerramentas);
-          console.log('✅ FUNCIONÁRIO vê ferramentas filtradas:', filteredFerramentas.length, 'de', allFerramentas.length);
         }
       }
 
       // BUSCAR OBRAS
-      console.log('🔍 Buscando obras e assistências no Supabase');
       const [obrasResult, assistenciasResult] = await Promise.all([
         supabase
           .from('obras')
@@ -152,16 +143,13 @@ export default function FerramentasPage() {
         console.error('❌ Erro ao carregar obras:', obrasError);
       } else {
         const allObras = obrasData || [];
-        console.log('🏗️ Obras retornadas do banco:', allObras.length);
 
         // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
         if (user.role === 'host') {
           setObras(allObras);
-          console.log('✅ HOST vê todas as obras:', allObras.length);
         } else {
           const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
           setObras(filteredObras);
-          console.log('✅ FUNCIONÁRIO vê obras filtradas:', filteredObras.length, 'de', allObras.length);
         }
       }
 
@@ -169,7 +157,6 @@ export default function FerramentasPage() {
         console.error('❌ Erro ao carregar assistências:', assistenciasError);
       } else {
         const allAssistencias = assistenciasData || [];
-        console.log('🔧 Assistências retornadas do banco:', allAssistencias.length);
         setAssistencias(allAssistencias);
       }
 
@@ -178,7 +165,6 @@ export default function FerramentasPage() {
 
       // RETRY automático se não for a última tentativa
       if (retryCount < MAX_RETRIES) {
-        console.log(`🔄 Tentando novamente em 2 segundos... (${retryCount + 1}/${MAX_RETRIES})`);
         setTimeout(() => loadData(retryCount + 1), 2000);
         return;
       }
@@ -258,7 +244,6 @@ export default function FerramentasPage() {
         ferramentaData.owner_id = ownerId;
       }
 
-      console.log(isEditing ? 'Atualizando ferramenta com dados:' : 'Criando ferramenta com dados:', ferramentaData);
 
       try {
         if (isEditing && editingId) {
@@ -273,7 +258,6 @@ export default function FerramentasPage() {
             throw updateError;
           }
 
-          console.log('✅ Ferramenta atualizada no Supabase');
           showToast('success', 'Equipamento atualizado com sucesso!');
         } else {
           // Criar nova ferramenta
@@ -312,7 +296,6 @@ export default function FerramentasPage() {
             });
           }
 
-          console.log('✅ Ferramenta criada no Supabase');
           showToast('success', 'Equipamento criado com sucesso!');
         }
       } catch (error) {
@@ -448,7 +431,6 @@ export default function FerramentasPage() {
     const newStatus = ferramenta.status === 'desaparecida' ? 'em_uso' : 'desaparecida';
 
     try {
-      console.log('🔄 Atualizando status de', ferramenta.name, 'para', newStatus);
 
       const { error } = await supabase
         .from('ferramentas')
@@ -460,7 +442,6 @@ export default function FerramentasPage() {
         throw error;
       }
 
-      console.log('✅ Status atualizado com sucesso');
 
       // Registrar no histórico
       if (newStatus === 'desaparecida') {
@@ -742,7 +723,6 @@ export default function FerramentasPage() {
           </p>
           <button
             onClick={() => {
-              console.log('🔄 Usuário clicou em recarregar manualmente');
               setLoading(true);
               loadData(0);
             }}

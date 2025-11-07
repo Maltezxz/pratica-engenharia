@@ -5,17 +5,13 @@ import { useAuth } from './hooks/useAuth';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 
-console.log('📦 App.tsx - Módulo carregado');
 
 function AppContent() {
-  console.log('🔄 AppContent - Componente renderizando...');
 
   const { user, loading } = useAuth();
 
-  console.log('👤 Estado do Auth:', { user: user?.email || 'null', loading });
 
   if (loading) {
-    console.log('⏳ Mostrando loading...');
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-500"></div>
@@ -23,16 +19,13 @@ function AppContent() {
     );
   }
 
-  console.log('🎯 Decisão:', user ? 'Mostrar Dashboard' : 'Mostrar Login');
 
   const component = user ? <Dashboard /> : <Login />;
-  console.log('✅ Componente selecionado:', user ? 'Dashboard' : 'Login');
 
   return component;
 }
 
 function App() {
-  console.log('🚀 App - Componente principal renderizando...');
 
   try {
     return (

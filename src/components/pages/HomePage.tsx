@@ -80,8 +80,6 @@ export default function HomePage() {
         return;
       }
 
-      console.log('🔄 [HOME] Carregando dados para:', user.name, 'Role:', user.role);
-
       const [obrasRes, ferramRes, historicoRes] = await Promise.all([
         supabase
           .from('obras')
@@ -103,7 +101,6 @@ export default function HomePage() {
       ]);
 
       if (obrasRes.error) {
-        console.error('❌ Erro obras:', obrasRes.error);
         setObras([]);
       } else {
         const allObras = obrasRes.data || [];
@@ -122,7 +119,6 @@ export default function HomePage() {
       }
 
       if (ferramRes.error) {
-        console.error('❌ Erro ferramentas:', ferramRes.error);
         setFerramentas([]);
         setTodasFerramentas([]);
       } else {
@@ -132,7 +128,6 @@ export default function HomePage() {
       }
 
       if (historicoRes.error) {
-        console.error('❌ Erro histórico:', historicoRes.error);
         setAtividadesRecentes([]);
       } else {
         const allHistorico = historicoRes.data || [];
@@ -140,7 +135,6 @@ export default function HomePage() {
       }
 
     } catch (error) {
-      console.error('❌ [HOME] Erro geral:', error);
       setObras([]);
       setFerramentas([]);
       setTodasFerramentas([]);
@@ -241,7 +235,6 @@ export default function HomePage() {
       triggerRefresh();
       setShowObraModal(true);
     } catch (error: unknown) {
-      console.error('Error adding ferramenta:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao adicionar equipamento';
       showToast('error', errorMessage);
     } finally {

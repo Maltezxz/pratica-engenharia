@@ -72,7 +72,6 @@ export default function ParametrosPage() {
         hostIds = hosts?.map(h => h.id) || [];
       }
 
-      console.log('📊 Owner IDs (todos os hosts):', hostIds);
 
       if (hostIds.length === 0) {
         setLoading(false);
@@ -191,11 +190,6 @@ export default function ParametrosPage() {
 
     setSaving(true);
     try {
-      console.log('=== INICIANDO SALVAMENTO DE PERMISSÕES ===');
-      console.log('Usuário selecionado:', selectedUser.id);
-      console.log('Host logado:', user.id);
-      console.log('Obras selecionadas:', Array.from(selectedObras));
-      console.log('Ferramentas selecionadas:', Array.from(selectedFerramentas));
 
       const obraIds = Array.from(selectedObras);
       const ferramentaIds = Array.from(selectedFerramentas);
@@ -231,7 +225,6 @@ export default function ParametrosPage() {
         throw new Error(ferramentaResult.data.error || 'Erro ao salvar permissões de ferramentas');
       }
 
-      console.log('✓ Permissões salvas com sucesso');
       showToast('success', `Permissões atualizadas com sucesso! ${obraResult.data.permissions_count} obra(s) e ${ferramentaResult.data.permissions_count} ferramenta(s) permitidas.`);
       await loadData();
       setSelectedUser(null);

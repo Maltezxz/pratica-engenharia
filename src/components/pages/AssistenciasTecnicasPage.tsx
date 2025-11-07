@@ -119,16 +119,12 @@ export default function AssistenciasTecnicasPage() {
     const loadPermissions = async () => {
       if (!user?.id) return;
 
-      console.log('🔑 Carregando permissões para:', user.role, user.email);
 
       if (user.role === 'host') {
         const allIds = new Set(ferramentas.map(f => f.id));
-        console.log('✅ HOST - Permissão para todas as', allIds.size, 'ferramentas');
         setAllowedFerramentaIds(allIds);
       } else {
         const permissions = await getFerramentaPermissions(user.id);
-        console.log('✅ FUNCIONÁRIO - Permissões carregadas:', permissions.size, 'ferramentas');
-        console.log('Ferramentas permitidas:', Array.from(permissions));
         setAllowedFerramentaIds(permissions);
       }
     };
@@ -253,7 +249,6 @@ export default function AssistenciasTecnicasPage() {
 
     setLoadingModalFerramentas(true);
     try {
-      console.log('🔄 Carregando ferramentas para o modal...');
 
       const hostId = user.role === 'host' ? user.id : user.host_id;
       if (!hostId) {
@@ -263,7 +258,6 @@ export default function AssistenciasTecnicasPage() {
       }
 
       const linkedHostIds = await getLinkedHostIds(hostId);
-      console.log('🔗 Hosts vinculados:', linkedHostIds);
 
       // Buscar TODAS as ferramentas disponíveis da empresa
       const { data: allFerramentas, error } = await supabase
@@ -279,31 +273,23 @@ export default function AssistenciasTecnicasPage() {
         return;
       }
 
-      console.log('✅ Total de ferramentas disponíveis no banco:', allFerramentas?.length || 0);
 
       if (!allFerramentas || allFerramentas.length === 0) {
-        console.log('⚠️ Nenhuma ferramenta disponível encontrada');
         setModalFerramentas([]);
         return;
       }
 
       // Se for HOST: mostrar TODAS
       if (user.role === 'host') {
-        console.log('👤 Usuário é HOST - mostrando TODAS as', allFerramentas.length, 'ferramentas');
         setModalFerramentas(allFerramentas);
         return;
       }
 
       // Se for USUÁRIO: filtrar apenas as permitidas
-      console.log('👤 Usuário comum - filtrando permissões...');
       const allowedIds = await getFerramentaPermissions(user.id);
-      console.log('🔐 Permissões do usuário:', allowedIds.size, 'ferramentas');
-      console.log('🔐 IDs permitidos:', Array.from(allowedIds));
 
       const allowed = allFerramentas.filter(f => allowedIds.has(f.id));
-      console.log('✅ Ferramentas permitidas:', allowed.length);
       if (allowed.length > 0) {
-        console.log('📋 Lista de ferramentas permitidas:', allowed.map(f => ({ id: f.id, name: f.name })));
       }
 
       setModalFerramentas(allowed);

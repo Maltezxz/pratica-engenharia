@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useState } from 'react';
+import React, { createContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { User, AuthContextType } from '../types';
 import { PROTECTED_HOST } from '../constants/auth';
@@ -18,7 +18,6 @@ function setCookie(name: string, value: string, days: number) {
   date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
   const expires = `expires=${date.toUTCString()}`;
   document.cookie = `${name}=${value};${expires};path=/;SameSite=Strict`;
-  console.log('🍪 Cookie salvo:', name);
 }
 
 function getCookie(name: string): string | null {
@@ -29,21 +28,17 @@ function getCookie(name: string): string | null {
     while (c.charAt(0) === ' ') c = c.substring(1, c.length);
     if (c.indexOf(nameEQ) === 0) {
       const value = c.substring(nameEQ.length, c.length);
-      console.log('🍪 Cookie encontrado:', name);
       return value;
     }
   }
-  console.log('🍪 Cookie não encontrado:', name);
   return null;
 }
 
 function deleteCookie(name: string) {
   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
-  console.log('🍪 Cookie deletado:', name);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  console.log('🔐 AuthProvider - Inicializando...');
 
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<unknown>(null);
@@ -51,14 +46,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [companyHostIdsCache, setCompanyHostIdsCache] = useState<string[]>([]);
 
   useEffect(() => {
-    console.log('🔐 AuthProvider - Verificando sessão salva...');
     checkSavedSession();
 
     // Revalidar sessão a cada 5 minutos para garantir sincronização
     const intervalId = setInterval(() => {
       const savedUserId = getCookie(AUTH_COOKIE_NAME);
       if (savedUserId && user) {
-        console.log('🔄 Revalidando sessão automaticamente...');
         loadUser(savedUserId);
       }
     }, 5 * 60 * 1000); // 5 minutos
@@ -70,7 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user?.id) return;
 
-    console.log('📡 Ativando sincronização em tempo real para user:', user.id);
 
     const channel = supabase
       .channel(`user-changes-${user.id}`)
@@ -83,12 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           filter: `id=eq.${user.id}`
         },
         (payload) => {
-          console.log('🔔 Mudança detectada no usuário:', payload);
           if (payload.eventType === 'UPDATE' && payload.new) {
-            console.log('✅ Atualizando dados do usuário em tempo real');
             setUser(payload.new as User);
           } else if (payload.eventType === 'DELETE') {
-            console.log('⚠️ Usuário foi deletado, fazendo logout');
             signOut();
           }
         }
@@ -96,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .subscribe();
 
     return () => {
-      console.log('📡 Desativando sincronização em tempo real');
       supabase.removeChannel(channel);
     };
   }, [user?.id]);
@@ -106,10 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const savedUserId = getCookie(AUTH_COOKIE_NAME);
 
       if (savedUserId) {
-        console.log('🔐 Sessão encontrada, carregando usuário:', savedUserId);
         await loadUser(savedUserId);
       } else {
-        console.log('🔐 Nenhuma sessão salva encontrada');
       }
     } catch (error) {
       console.error('❌ Erro ao verificar sessão:', error);
@@ -119,12 +105,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const checkSession = async () => {
-    console.log('⚠️ checkSession chamado mas ignorado (simplificado)');
   };
 
-  const loadUser = async (userId: string) => {
+  const loadUser = useCallback(async (userId: string) => {
     try {
-      console.log('🔄 Carregando usuário do Supabase, ID:', userId);
 
       const { data, error } = await supabase
         .from('users')
@@ -142,7 +126,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         deleteCookie(AUTH_COOKIE_NAME);
       } else {
-        console.log('✅ Usuário carregado com sucesso do Supabase:', data.name, data.role);
         setUser(data);
         setCookie(AUTH_COOKIE_NAME, data.id, COOKIE_EXPIRES_DAYS);
       }
@@ -151,11 +134,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       deleteCookie(AUTH_COOKIE_NAME);
     }
-  };
+  }, []);
 
   const signIn = async (username: string, password: string) => {
     try {
-      console.log('🔍 Tentando login com:', { username });
 
       // 1. Buscar usuário pelo nome
       const { data: userData, error: userError } = await supabase
@@ -173,7 +155,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Usuário não encontrado. Verifique o nome de usuário.');
       }
 
-      console.log('✅ Usuário encontrado:', userData);
 
       // 2. Verificar credenciais
       const { data: credData, error: credError } = await supabase
@@ -197,10 +178,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Senha incorreta');
       }
 
-      console.log('✅ Login bem-sucedido! Salvando sessão...');
 
       // LIMPAR TODOS os storages antigos para evitar dados desatualizados
-      console.log('🧹 Limpando localStorage e sessionStorage...');
       localStorage.clear();
       sessionStorage.clear();
 
@@ -210,7 +189,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // 5. Pre-carregar cache de host IDs se for host
       if (userData.role === 'host') {
-        console.log('🔄 Pre-carregando cache de host IDs...');
         const { data: hosts } = await supabase
           .from('users')
           .select('id')
@@ -219,7 +197,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (hosts) {
           const hostIds = hosts.map(h => h.id);
           setCompanyHostIdsCache(hostIds);
-          console.log('✅ Cache pre-carregado:', hostIds);
         }
       }
 
@@ -232,13 +209,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signOut = async () => {
-    console.log('🚪 Fazendo logout...');
+  const signOut = useCallback(async () => {
     setUser(null);
     setSession(null);
     deleteCookie(AUTH_COOKIE_NAME);
-    console.log('✅ Logout realizado, cookie removido');
-  };
+  }, []);
 
   const addEmployee = async (
     employeeData: Omit<User, 'id' | 'created_at' | 'updated_at' | 'host_id'>,
@@ -248,7 +223,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Apenas hosts podem cadastrar funcionários');
     }
 
-    console.log('[addEmployee] Iniciando cadastro:', { name: employeeData.name, email: employeeData.email });
 
     try {
       // 1. Criar funcionário ou host na tabela users
@@ -268,7 +242,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(`Erro ao criar funcionário: ${tableError.message}`);
       }
 
-      console.log('[addEmployee] Funcionário criado na tabela:', tableUser.id);
 
       // 2. Criar credenciais
       const { error: credError } = await supabase
@@ -285,7 +258,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(`Erro ao criar credenciais: ${credError.message}`);
       }
 
-      console.log('[addEmployee] Funcionário criado com sucesso:', tableUser.id);
       return tableUser;
     } catch (error) {
       console.error('[addEmployee] Erro geral:', error);
@@ -315,7 +287,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(`Erro ao remover funcionário: ${error.message}`);
       }
 
-      console.log('Funcionário removido com sucesso');
     } catch (error) {
       console.error('Erro ao remover funcionário:', error);
       throw error;
@@ -370,12 +341,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Retornar cache se já foi carregado
     if (companyHostIdsCache.length > 0) {
-      console.log('💾 Usando cache de host IDs:', companyHostIdsCache);
       return companyHostIdsCache;
     }
 
     try {
-      console.log('🔍 Buscando host IDs do banco...');
       const { data: hosts, error } = await supabase
         .from('users')
         .select('id')
@@ -388,7 +357,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const hostIds = hosts?.map(h => h.id) || [user.id];
       setCompanyHostIdsCache(hostIds);
-      console.log('✅ Cache de host IDs atualizado:', hostIds);
       return hostIds;
     } catch (error) {
       console.error('Erro ao buscar IDs dos hosts:', error);
@@ -396,23 +364,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isProtectedUser = (userId: string): boolean => {
+  const isProtectedUser = useCallback((userId: string): boolean => {
     return userId === PROTECTED_HOST.id;
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    user,
+    session,
+    loading,
+    signIn,
+    signOut,
+    addEmployee,
+    removeEmployee,
+    getEmployees,
+    getCompanyHostIds,
+    isProtectedUser
+  }), [user, session, loading, signOut, isProtectedUser]);
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      session,
-      loading,
-      signIn,
-      signOut,
-      addEmployee,
-      removeEmployee,
-      getEmployees,
-      getCompanyHostIds,
-      isProtectedUser
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

@@ -43,7 +43,6 @@ export default function RelatoriosPage() {
         hostIds = hosts?.map(h => h.id) || [];
       }
 
-      console.log('📊 Owner IDs (todos os hosts):', hostIds);
 
       if (hostIds.length === 0) {
         setFerramentas([]);

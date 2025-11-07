@@ -4,9 +4,6 @@ import App from './App.tsx';
 import './index.css';
 
 // Debug: Log initialization
-console.log('🚀 Prática Engenharia - Iniciando aplicação...');
-console.log('📍 URL:', window.location.href);
-console.log('🔧 Ambiente:', import.meta.env.MODE);
 
 // Check environment variables
 if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
@@ -52,7 +49,6 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
     root.appendChild(container);
   }
 } else {
-  console.log('✓ Variáveis de ambiente configuradas');
 
   // Register Service Worker for PWA
   if ('serviceWorker' in navigator) {
@@ -60,7 +56,6 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
-          console.log('✓ Service Worker registrado:', registration);
         })
         .catch((registrationError) => {
           console.warn('⚠ Falha ao registrar Service Worker:', registrationError);
@@ -74,13 +69,11 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
       throw new Error('Elemento #root não encontrado no DOM');
     }
 
-    console.log('✓ Renderizando App...');
     createRoot(rootElement).render(
       <StrictMode>
         <App />
       </StrictMode>
     );
-    console.log('✓ App renderizado com sucesso!');
   } catch (error) {
     console.error('❌ Erro ao inicializar aplicação:', error);
     const root = document.getElementById('root');

@@ -35,7 +35,6 @@ export default function ObrasPage() {
         return;
       }
 
-      console.log('🔄 Carregando obras para:', user.name, user.role);
 
       // Obras são da EMPRESA (host), cada usuário vê apenas as do seu host
       const hostId = user.role === 'host' ? user.id : user.host_id;
@@ -47,7 +46,6 @@ export default function ObrasPage() {
         return;
       }
 
-      console.log('🔍 Buscando obras da empresa. Host ID:', hostId);
 
       const { data, error } = await supabase
         .from('obras')
@@ -65,11 +63,9 @@ export default function ObrasPage() {
       // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
       if (user.role === 'host') {
         setObras(allObras);
-        console.log('✅ HOST vê todas as obras:', allObras.length);
       } else {
         const filteredObras = await getFilteredObras(user.id, user.role, user.host_id || null, allObras);
         setObras(filteredObras);
-        console.log('✅ FUNCIONÁRIO vê obras filtradas:', filteredObras.length, 'de', allObras.length);
       }
     } catch (error) {
       console.error('Error loading obras:', error);
@@ -124,7 +120,6 @@ export default function ObrasPage() {
 
       if (isEditing && editingId) {
         // Atualizar obra existente
-        console.log('Atualizando obra com dados:', obraData);
 
         const { data, error } = await supabase
           .from('obras')
@@ -138,7 +133,6 @@ export default function ObrasPage() {
           throw new Error(`Erro ao atualizar obra: ${error.message}`);
         }
 
-        console.log('✅ Obra atualizada no Supabase:', data);
 
         await supabase.from('historico').insert({
           tipo_evento: 'obra_atualizada',
@@ -160,7 +154,6 @@ export default function ObrasPage() {
           owner_id: user.role === 'host' ? user.id : user.host_id,
         };
 
-        console.log('Criando obra com dados:', newObraData);
 
         const { data, error } = await supabase
           .from('obras')
@@ -173,7 +166,6 @@ export default function ObrasPage() {
           throw new Error(`Erro ao criar obra: ${error.message}`);
         }
 
-        console.log('✅ Obra criada no Supabase:', data);
 
         await supabase.from('historico').insert({
           tipo_evento: 'obra_criada',
@@ -250,7 +242,6 @@ export default function ObrasPage() {
         throw new Error(`Erro ao atualizar obra: ${error.message}`);
       }
 
-      console.log('✅ Obra atualizada no Supabase');
 
       if (newStatus === 'finalizada') {
         const obra = obras.find(o => o.id === obraId);
@@ -301,7 +292,6 @@ export default function ObrasPage() {
         throw new Error(`Erro ao excluir obra: ${error.message}`);
       }
 
-      console.log('✅ Obra excluída do Supabase');
       showToast('success', 'Obra excluída com sucesso!');
 
       await loadObras();

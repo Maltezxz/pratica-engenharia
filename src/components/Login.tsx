@@ -3,7 +3,6 @@ import { useAuth } from '../hooks/useAuth';
 import logoImage from '../assets/pratica-logo.png';
 
 export default function Login() {
-  console.log('🔓 Login - Componente renderizando!');
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -11,7 +10,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
 
-  console.log('🔓 Login - Estado:', { hasUsername: !!username, hasPassword: !!password });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +26,6 @@ export default function Login() {
     }
   };
 
-  console.log('🎨 Login - Renderizando JSX (tela de login)');
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-black via-gray-900 to-gray-800">
